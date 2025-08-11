@@ -1,0 +1,152 @@
+@page "/fashion"
+@using Microsoft.AspNetCore.Components
+@using System
+@inject NavigationManager Navigation
+@inject Blazored.SessionStorage.ISessionStorageService SessionStorage
+@inject SmartDigitalCloset.Data.FavoritesService FavoritesService
+@inject SmartDigitalCloset.Data.InterestService InterestService
+
+<div class="music-gradient-bg">
+    <!-- Profile Button -->
+    <div style="position: fixed; top: 20px; right: 20px; z-index: 1000;">
+        <button @onclick='() => Navigation.NavigateTo("/profile")' 
+                style="background: linear-gradient(135deg, #5D4037 0%, #E64A19 100%); color: white; border: none; border-radius: 25px; padding: 12px 20px; display: flex; align-items: center; gap: 8px; font-size: 1rem; font-weight: 500; cursor: pointer; box-shadow: 0 4px 15px rgba(123, 47, 242, 0.3); transition: transform 0.2s, box-shadow 0.2s; font-family: 'Poppins', 'Inter', Arial, sans-serif;"
+                onmouseover="this.style.transform='translateY(-2px) scale(1.05)'; this.style.boxShadow='0 6px 20px rgba(123, 47, 242, 0.4)';"
+                onmouseout="this.style.transform=''; this.style.box-shadow: 0 4px 15px rgba(101, 67, 33, 0.3);';"
+                title="View Profile">
+            <span style="font-size: 1.2rem;">👤</span>
+            <span style="font-weight: 600;">Profile</span>
+        </button>
+    </div>
+    
+    <main class="music-inspiration-main"><h2 class="music-inspiration-title">Fashion Inspiration Gallery</h2>
+        
+        <div style="text-align: center; margin: 15px auto; max-width: 600px;">
+            <input type="text" @bind="searchQuery" @bind:event="oninput" 
+                   placeholder="Search fashion items..." 
+                   style="width: 100%; padding: 8px 12px; border-radius: 20px; border: 1px solid #ddd; font-size: 16px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);" />
+        </div>
+        
+        <div class="music-cars-gallery">
+            @foreach (var item in FilteredItems.Take(itemsToShow))
+            {
+                <div class="car-card" style="position:relative;">
+                    <img src="@item.Url" alt="@item.Name" loading="lazy" class="artist-img" />
+                    <div class="car-label">@item.Name</div>
+                    <button @onclick="() => SaveFavorite(item)" style="position:absolute;top:8px;right:8px;background:none;border:none;cursor:pointer;">
+                        <span style="font-size:1.3rem;color:@(IsFavorite(item) ? "#e60023" : "#bbb");">&#10084;</span>
+                    </button>
+                </div>
+            }
+        </div>        @if (itemsToShow < FilteredItems.Count)
+        {
+            <button class="sc-btn-loadmore" @onclick="LoadMore">Load More</button>
+        }
+        <button class="save-interest-btn" @onclick="ToggleInterest" style="background: linear-gradient(135deg, #5D4037 0%, #E64A19 100%);">@(_isSaved ? "Remove from Saved Interests" : "Save Interest")</button>
+    </main>
+</div>
+
+@code {
+    private HashSet<string> favoriteNames = new();
+    private string searchQuery = "";
+    private bool _isSaved;
+    private int itemsToShow = 6;
+    
+    private List<(string Url, string Name)> FilteredItems => string.IsNullOrWhiteSpace(searchQuery)
+        ? FashionItems
+        : FashionItems.Where(item => item.Name.Contains(searchQuery, StringComparison.OrdinalIgnoreCase)).ToList();
+    
+    protected override async Task OnInitializedAsync()
+    {
+        var email = await SessionStorage.GetItemAsync<string>("userEmail");
+        if (string.IsNullOrEmpty(email))
+        {
+            Navigation.NavigateTo("/login", true);
+        }
+        else
+        {
+            var favs = await FavoritesService.GetFavoritesAsync(email);
+            favoriteNames = favs.Where(f => f.ItemType == "Fashion").Select(f => f.ItemName).ToHashSet();
+            
+            // Check if interest is already saved
+            _isSaved = await InterestService.HasInterestAsync(email, "Fashion");
+        }
+    }
+
+    private async Task SaveFavorite((string Url, string Name) item)
+    {
+        try
+        {
+            var email = await SessionStorage.GetItemAsync<string>("userEmail");
+            if (string.IsNullOrEmpty(email)) return;
+            
+            if (favoriteNames.Contains(item.Name))
+            {
+                // Remove from favorites
+                await FavoritesService.RemoveFavoriteAsync(email, item.Name);
+                favoriteNames.Remove(item.Name);
+            }
+            else
+            {
+                // Add to favorites
+                await FavoritesService.AddFavoriteAsync(new SmartDigitalCloset.Data.FavoriteItem
+                {
+                    UserEmail = email,
+                    ItemType = "Fashion",
+                    ItemName = item.Name,
+                    ItemImageUrl = item.Url
+                });
+                favoriteNames.Add(item.Name);
+            }
+            StateHasChanged();
+        }
+        catch (Exception)
+        {
+            // Silently ignore exceptions to prevent UI crashes
+            // In a production app, we would log this exception
+        }
+    }
+    
+    private bool IsFavorite((string Url, string Name) item) => favoriteNames.Contains(item.Name);
+    
+    private async Task ToggleInterest()
+    {
+        var email = await SessionStorage.GetItemAsync<string>("userEmail");
+        if (string.IsNullOrEmpty(email))
+            return;
+            
+        _isSaved = !_isSaved;
+        
+        if (_isSaved)
+        {
+            await InterestService.SaveInterestAsync(email, "Fashion");
+        }
+        else
+        {
+            await InterestService.RemoveInterestAsync(email, "Fashion");
+        }
+        
+        StateHasChanged();
+    }
+
+    private void LoadMore() => itemsToShow = Math.Min(itemsToShow + 6, FilteredItems.Count);
+
+    private List<(string Url, string Name)> FashionItems = new()
+    {
+        ("https://hips.hearstapps.com/hmg-prod/images/denim-jackets-64123cae227a8.png?crop=1.00xw:0.668xh;0,0.225xh&resize=640:*", "Classic Denim Jacket"),
+        ("https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTXka6OGUs7D0ro5SvsSVCvrwm5ZpW7KrgRMA&s", "Red Evening Gown"),
+        ("https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTI75VsKQw9Osq9HsGvxz3S-q8cRmt2nF73Kg&s", "Street Style Look"),
+        ("https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSpdXWckALgMPJJ2iHW6YyjluJWeEmlwg2Z5Q&s", "Summer Floral Dress"),
+        ("https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQG4bId15aDSOtlkLAxZNJWTHX_cvevzlk0bg&s", "Minimalist White Shirt"),
+        ("https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQIL7HWmOiesblnRBANpyS1t2_bZySGh21Rpg&s", "Boho Maxi Skirt"),
+        ("https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQN3wpSN6c1SPSLQUDUHvXB7JyF8eUJ2XSF2Q&s", "Trendy Sneakers"),
+        ("https://i.pinimg.com/736x/31/ac/8a/31ac8a77e0c8fdc99d2d101fea1b8a0d.jpg", "Statement Accessories"),
+        ("https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSS4sQDP2mPtb_fakZ80X4Gwh3tGIwT9Q3A0Q&s", "Elegant Black Blazer"),
+        ("https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSy0kDSpXa0xIRJq3Eesf6Zs2A402-rrLAkgg&s", "Casual Knit Sweater"),
+        ("https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQ_jyWTSVw9fJH3M-fCyUDF1BLQhmavS5jZIA&s", "Chic Handbag"),
+        ("https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTQC6tgj1we2mIs8J0HpX3epzsMxwfO5oLhmA&s", "Patterned Scarf"),
+        ("https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcR-S0Iu8X0V38IrmHJA_5ZVx1K4_QK-jNbUkw&s", "Oversized Sunglasses"),
+        ("https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcShQeZF9J0At3Apw7jR2L6X0RB4dGwYGGdqMA&s", "Leather Boots"),
+        ("https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSWQs3H7lN6KeRhbpNn6LTzIqUV1lAm_l3mjw&s", "Plaid Skirt")
+    };
+}

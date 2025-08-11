@@ -1,0 +1,111 @@
+using System;
+using System.Data.SqlClient;
+using System.Threading.Tasks;
+using System.Collections.Generic;
+
+namespace SmartDigitalCloset.Data
+{
+    public class FavoriteItem
+    {
+        public int Id { get; set; }
+        public string UserEmail { get; set; } = "";
+        public string ItemType { get; set; } = "";
+        public string ItemName { get; set; } = "";
+        public string ItemImageUrl { get; set; } = "";
+    }
+
+    public class FavoritesService
+    {
+        private readonly string _connectionString;
+
+        public FavoritesService(string connectionString)
+        {
+            _connectionString = connectionString;
+        }
+
+        public async Task AddFavoriteAsync(FavoriteItem item)
+        {
+            try
+            {
+                using var conn = new SqlConnection(_connectionString);
+                await conn.OpenAsync();
+                
+                // Check if this item already exists to avoid duplicates
+                var checkCmd = new SqlCommand(
+                    "SELECT COUNT(*) FROM Favorites WHERE UserEmail = @UserEmail AND ItemName = @ItemName", conn);
+                checkCmd.Parameters.AddWithValue("@UserEmail", item.UserEmail);
+                checkCmd.Parameters.AddWithValue("@ItemName", item.ItemName);
+                
+                int exists = (int)await checkCmd.ExecuteScalarAsync();
+                if (exists > 0)
+                {
+                    // Item already exists, no need to add it again
+                    return;
+                }
+                
+                var cmd = new SqlCommand(
+                    "INSERT INTO Favorites (UserEmail, ItemType, ItemName, ItemImageUrl) VALUES (@UserEmail, @ItemType, @ItemName, @ItemImageUrl)", conn);
+                cmd.Parameters.AddWithValue("@UserEmail", item.UserEmail);
+                cmd.Parameters.AddWithValue("@ItemType", item.ItemType);
+                cmd.Parameters.AddWithValue("@ItemName", item.ItemName);
+                cmd.Parameters.AddWithValue("@ItemImageUrl", item.ItemImageUrl);
+                await cmd.ExecuteNonQueryAsync();
+            }
+            catch (Exception)
+            {
+                // In a production app, we would log this exception
+                // For now, we're just absorbing it to prevent UI crashes
+            }
+        }
+        
+        public async Task<List<FavoriteItem>> GetFavoritesAsync(string userEmail)
+        {
+            var result = new List<FavoriteItem>();
+            try
+            {
+                using var conn = new SqlConnection(_connectionString);
+                await conn.OpenAsync();
+                var cmd = new SqlCommand(
+                    "SELECT * FROM Favorites WHERE UserEmail = @UserEmail", conn);
+                cmd.Parameters.AddWithValue("@UserEmail", userEmail);
+                using var reader = await cmd.ExecuteReaderAsync();
+                while (await reader.ReadAsync())
+                {
+                    result.Add(new FavoriteItem
+                    {
+                        Id = (int)reader["Id"],
+                        UserEmail = (string)reader["UserEmail"],
+                        ItemType = (string)reader["ItemType"],
+                        ItemName = (string)reader["ItemName"],
+                        ItemImageUrl = (string)reader["ItemImageUrl"]
+                    });
+                }
+            }
+            catch (Exception)
+            {
+                // In a production app, we would log this exception
+                // For now, just return an empty list to avoid crashes
+            }
+            return result;
+        }
+
+        public async Task RemoveFavoriteAsync(string userEmail, string itemName)
+        {
+            try
+            {
+                using var conn = new SqlConnection(_connectionString);
+                await conn.OpenAsync();
+                var cmd = new SqlCommand(
+                    "DELETE FROM Favorites WHERE UserEmail = @UserEmail AND ItemName = @ItemName", conn);
+                cmd.Parameters.AddWithValue("@UserEmail", userEmail);
+                cmd.Parameters.AddWithValue("@ItemName", itemName);
+                await cmd.ExecuteNonQueryAsync();
+            }
+            catch (Exception)
+            {
+                // In a production app, we would log this exception
+                // For now, we're just absorbing it to prevent UI crashes
+            }
+        }
+    }
+}

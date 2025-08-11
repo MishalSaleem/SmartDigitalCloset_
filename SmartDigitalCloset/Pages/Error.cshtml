@@ -1,0 +1,59 @@
+﻿@page
+@model SmartDigitalCloset.Pages.ErrorModel
+
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Error - Smart Digital Closet</title>
+    <link rel="stylesheet" href="~/css/site.css" />
+    <style>
+        .error-container {
+            text-align: center;
+            padding: 40px 20px;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        .error-title {
+            color: #e74c3c;
+            font-size: 24px;
+            margin-bottom: 20px;
+        }
+        .error-message {
+            color: #555;
+            margin-bottom: 30px;
+        }
+        .home-button {
+            display: inline-block;
+            padding: 10px 20px;
+            background-color: #3498db;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            transition: background-color 0.3s;
+        }
+        .home-button:hover {
+            background-color: #2980b9;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="error-container">
+        <h1 class="error-title">Oops! Something went wrong</h1>
+        <div class="error-message">
+            @if (Model.ShowRequestId)
+            {
+                <p>
+                    <strong>Request ID:</strong> <code>@Model.RequestId</code>
+                </p>
+            }
+            <p>We apologize for the inconvenience. Please try again later or contact support if the problem persists.</p>
+        </div>
+        <a href="/" class="home-button">Return to Home</a>
+    </div>
+</body>
+
+</html>

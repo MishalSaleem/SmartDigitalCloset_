@@ -1,0 +1,332 @@
+/* Music Page - Dark Brown/Orange Gradient Theme with Updated Buttons */
+.music-gradient-bg {
+    min-height: 100vh;
+    width: 100vw;
+    display: flex;
+    background: linear-gradient(135deg, #5D4037 0%, #8D6E63 60%, #BCAAA4 100%);
+    font-family: 'Poppins', 'Inter', Arial, sans-serif;
+    overflow-x: hidden;
+    transition: background 0.5s;
+}
+
+.pinterest-sidebar {
+    width: 80px;
+    background: rgba(255,255,255,0.95);
+    border-right: 1.5px solid #D7CCC8;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding-top: 2.5rem;
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    z-index: 100;
+    box-shadow: 2px 0 16px 0 rgba(93,64,55,0.07);
+}
+
+.sidebar-logo {
+    margin-bottom: 2.5rem;
+    font-size: 2.2rem;
+    background: linear-gradient(135deg, #5D4037 0%, #E64A19 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+}
+
+.sidebar-nav {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    width: 100%;
+}
+
+    .sidebar-nav li {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        margin-bottom: 2.2rem;
+        cursor: pointer;
+        color: #8D6E63;
+        font-size: 1.5rem;
+        transition: all 0.18s;
+        border-radius: 12px;
+        padding: 0.7rem 0;
+    }
+
+        .sidebar-nav li:hover,
+        .sidebar-nav li:focus {
+            background: linear-gradient(135deg, #5D4037 0%, #E64A19 100%);
+            color: #fff;
+        }
+
+.sidebar-icon {
+    font-size: 1.7rem;
+    margin-bottom: 0.2rem;
+}
+
+.sidebar-label {
+    font-size: 0.95rem;
+    font-weight: 600;
+    letter-spacing: 0.2px;
+}
+
+/* Button Styles - Updated to Dark Brown/Orange Gradient */
+.btn {
+    padding: 12px 24px;
+    border-radius: 999px;
+    font-weight: 600;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    border: none;
+    text-align: center;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    overflow: hidden;
+    z-index: 1;
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, #5D4037 0%, #E64A19 100%);
+    color: white;
+    box-shadow: 0 4px 12px rgba(93, 64, 55, 0.3);
+}
+
+    .btn-primary:hover {
+        background: linear-gradient(135deg, #E64A19 0%, #5D4037 100%);
+        transform: translateY(-2px);
+        box-shadow: 0 6px 16px rgba(230, 74, 25, 0.4);
+    }
+
+.btn-secondary {
+    background: white;
+    color: #5D4037;
+    border: 2px solid #5D4037;
+}
+
+    .btn-secondary:hover {
+        background: rgba(93, 64, 55, 0.1);
+        color: #E64A19;
+        border-color: #E64A19;
+        transform: translateY(-2px);
+    }
+
+.music-inspiration-main {
+    flex: 1;
+    padding: 3.5rem 2vw 2.5rem 2vw;
+    margin-left: 80px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-width: 0;
+}
+
+.music-inspiration-title {
+    font-size: 2.4rem;
+    font-weight: 800;
+    color: #fff;
+    margin-bottom: 2.2rem;
+    text-shadow: 0 4px 24px rgba(0,0,0,0.25), 0 2px 12px rgba(93,64,55,0.18);
+    letter-spacing: 0.04em;
+}
+
+.music-cars-gallery {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 2rem;
+    width: 100%;
+    max-width: 1400px;
+    margin: 0 auto;
+    animation: fadeIn 1.2s;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(40px);
+    }
+
+    to {
+        opacity: 1;
+        transform: none;
+    }
+}
+
+.car-card {
+    background: rgba(255,255,255,0.97);
+    border-radius: 22px;
+    box-shadow: 0 4px 24px 0 rgba(93,64,55,0.10), 0 2px 12px 0 rgba(230,74,25,0.10);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    align-items: center;
+    transition: all 0.25s;
+    border: 2.5px solid #8D6E63;
+    cursor: pointer;
+    position: relative;
+    max-width: 320px;
+    min-width: 220px;
+    height: 320px;
+    margin: 0 auto;
+}
+
+    .car-card:hover {
+        box-shadow: 0 8px 32px 0 rgba(93,64,55,0.18), 0 4px 24px 0 rgba(230,74,25,0.18);
+        transform: scale(1.045) translateY(-4px);
+        border: 2.5px solid #E64A19;
+    }    .car-card img, .artist-img {
+        width: 100%;
+        max-width: 320px;
+        height: 220px;
+        object-fit: cover;
+        border-radius: 18px 18px 0 0;
+        background: #f3f3f3;
+        image-rendering: auto;
+        image-rendering: -webkit-optimize-contrast;
+        display: block;
+        margin: 0 auto;
+    }
+
+    .car-card:hover img {
+        filter: brightness(0.92) blur(0.5px);
+    }
+
+.car-label {
+    padding: 16px 0 12px 0;
+    font-size: 1.18rem;
+    font-weight: 700;
+    background: linear-gradient(135deg, #5D4037 0%, #E64A19 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    text-align: center;
+    letter-spacing: 0.04em;
+    text-shadow: 0 2px 8px #fff, 0 1px 4px #D7CCC8;
+    word-break: break-word;
+}
+
+.artist-img {
+    width: 100%;
+    height: 180px;
+    object-fit: cover;
+    border-radius: 18px 18px 0 0;
+    box-shadow: 0 4px 18px 0 rgba(93,64,55,0.13), 0 2px 8px 0 rgba(230,74,25,0.10);
+    background: #f3f3f3;
+    transition: filter 0.18s;
+}
+
+/* Action Button in Cards */
+.card-action-btn {
+    position: absolute;
+    bottom: 15px;
+    right: 15px;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #5D4037 0%, #E64A19 100%);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    cursor: pointer;
+    box-shadow: 0 2px 8px rgba(93,64,55,0.3);
+    transition: all 0.3s ease;
+    z-index: 2;
+}
+
+    .card-action-btn:hover {
+        transform: scale(1.1) rotate(10deg);
+        background: linear-gradient(135deg, #E64A19 0%, #5D4037 100%);
+    }
+
+@media (max-width: 900px) {
+    .music-inspiration-main {
+        margin-left: 60px;
+        padding: 1.2rem 1vw 1.2rem 1vw;
+    }
+
+    .music-cars-gallery {
+        grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+        gap: 1rem;
+    }
+
+    .car-card img {
+        height: 90px;
+    }
+
+    .artist-img {
+        height: 90px;
+    }
+
+    .btn {
+        padding: 10px 18px;
+        font-size: 0.9rem;
+    }
+}
+
+@media (max-width: 600px) {
+    .music-gradient-bg {
+        flex-direction: column;
+    }
+
+    .music-inspiration-main {
+        margin-left: 0;
+        padding: 0.5rem 0.5vw;
+    }
+
+    .pinterest-sidebar {
+        position: static;
+        width: 100vw;
+        flex-direction: row;
+        height: 60px;
+        padding-top: 0;
+    }
+
+    .sidebar-nav {
+        flex-direction: row;
+        display: flex;
+        width: 100vw;
+        justify-content: space-around;
+    }
+
+        .sidebar-nav li {
+            margin-bottom: 0;
+            padding: 0.5rem 0.7rem;
+        }
+
+    .music-cars-gallery {
+        grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+        gap: 0.5rem;
+    }
+
+    .car-card img {
+        height: 70px;
+    }
+
+    .artist-img {
+        height: 70px;
+    }
+
+    .btn {
+        padding: 8px 16px;
+        font-size: 0.85rem;
+    }
+
+    .card-action-btn {
+        width: 30px;
+        height: 30px;
+        bottom: 10px;
+        right: 10px;
+    }
+}
+
+body, html, .fashion-bg, .fashion-container {
+    min-height: 100vh;
+    width: 100vw;
+    overflow: hidden !important;
+}

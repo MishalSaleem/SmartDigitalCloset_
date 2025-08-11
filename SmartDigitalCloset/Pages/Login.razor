@@ -1,0 +1,141 @@
+@page "/login"
+@using System.ComponentModel.DataAnnotations
+@using Microsoft.AspNetCore.Components.Forms
+@using Blazored.SessionStorage
+@using Blazored.LocalStorage
+@using SmartDigitalCloset.Data
+@using SmartDigitalCloset.Services
+@using Microsoft.AspNetCore.Components.Web
+@inject Blazored.SessionStorage.ISessionStorageService SessionStorage
+@inject Blazored.LocalStorage.ILocalStorageService LocalStorage
+@inject IJSRuntime JSRuntime
+@inject IConfiguration Configuration
+@inject NavigationManager Navigation
+@inject IAuthenticationService AuthService
+@inject UserStore UserStore
+
+<div class="sc-pinterest-bg">
+    <div class="sc-pinterest-layout">
+        <!-- Left: Image grid and heading -->
+        <div class="sc-pinterest-left">
+            <h1 class="sc-pinterest-heading">Log in to get your style<br>sorted.</h1>
+        </div>
+        <!-- Right: Login form -->
+        <div class="sc-login-card">
+            <div class="sc-logo-row">
+                <span class="sc-logo-circle">SC</span>
+                <span class="sc-app-title">SmartCloset</span>
+            </div>
+            <div class="sc-welcome">Welcome to SmartCloset</div>
+            @if (!string.IsNullOrEmpty(errorMessage))
+            {
+                <div class="sc-error-message">@errorMessage</div>
+            }
+            <EditForm Model="@loginModel" OnValidSubmit="@HandleLogin">
+                <DataAnnotationsValidator />
+                <div class="sc-form-group">
+                    <InputText id="email" class="sc-input" @bind-Value="loginModel.Email" placeholder="Email address" />
+                    <ValidationMessage For="@(() => loginModel.Email)" />
+                </div>
+                <div class="sc-form-group">
+                    <InputText id="password" type="password" class="sc-input" @bind-Value="loginModel.Password" placeholder="Password" />
+                    <ValidationMessage For="@(() => loginModel.Password)" />
+                </div>
+                <div class="sc-forgot-row">
+                    <a href="#" class="sc-forgot-link">Forgot your password?</a>
+                </div>
+                <button type="submit" class="sc-btn sc-btn-login">Log in</button>
+            </EditForm>
+            <div class="sc-or">OR</div>
+            <button class="sc-btn sc-btn-facebook"><span class="sc-icon fb"></span>Continue with Facebook</button>
+            <button class="sc-btn sc-btn-google"><span class="sc-icon google"></span>Continue with Google</button>
+            <button class="sc-btn sc-btn-signup" @onclick="NavigateToSignup">Sign up</button>
+        </div>
+    </div>
+</div>
+
+@code {
+    private LoginModel loginModel = new();
+    private string errorMessage = string.Empty;
+    private UserDbHelper userDbHelper;
+
+    protected override void OnInitialized()
+    {
+        try
+        {
+            userDbHelper = new UserDbHelper(Configuration);
+        }
+        catch (Exception ex)
+        {
+            errorMessage = "Error initializing login. Please try again.";
+            Console.WriteLine($"Initialization error: {ex.Message}");
+        }
+    }
+
+    private async Task HandleLogin()
+    {
+        try
+        {
+            if (AuthService.ValidateUser(loginModel.Email, loginModel.Password))
+            {
+                var user = AuthService.GetUserByEmail(loginModel.Email);
+                await SessionStorage.SetItemAsync("userId", user.Id);
+                await SessionStorage.SetItemAsync("userEmail", user.Email);
+                
+                // Store user data in LocalStorage for the Profile page
+                await LocalStorage.SetItemAsync("userEmail", user.Email);
+                
+                // Create a full name from the first and last name
+                string fullName = "";
+                if (!string.IsNullOrEmpty(user.FirstName))
+                {
+                    fullName = user.FirstName;
+                    if (!string.IsNullOrEmpty(user.LastName))
+                    {
+                        fullName += " " + user.LastName;
+                    }
+                }
+                else if (!string.IsNullOrEmpty(user.Username))
+                {
+                    fullName = user.Username;
+                }
+                
+                // If we have a name, store it
+                if (!string.IsNullOrEmpty(fullName))
+                {
+                    await LocalStorage.SetItemAsync("userName", fullName);
+                }
+                
+                await JSRuntime.InvokeVoidAsync("SmartCloset.setUserEmail", user.Email);
+                var joinedDate = await JSRuntime.InvokeAsync<string>("SmartCloset.getJoinedDate");
+                if (string.IsNullOrEmpty(joinedDate))
+                {
+                    await JSRuntime.InvokeVoidAsync("SmartCloset.setJoinedDate", DateTime.Today.ToString("yyyy-MM-dd"));
+                    await LocalStorage.SetItemAsync("joinedDate", DateTime.Today.ToString("yyyy-MM-dd"));
+                }
+                Navigation.NavigateTo("/interests");
+            }
+            else
+            {
+                errorMessage = "Invalid email or password";
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = "An error occurred during login. Please try again.";
+            Console.WriteLine($"Login error: {ex.Message}");
+        }
+    }
+
+    private void NavigateToSignup() => Navigation.NavigateTo("/signup");
+
+    public class LoginModel
+    {
+        [Required(ErrorMessage = "Email is required")]
+        [EmailAddress(ErrorMessage = "Invalid email address")]
+        public string Email { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = "Password is required")]
+        public string Password { get; set; } = string.Empty;
+    }
+}

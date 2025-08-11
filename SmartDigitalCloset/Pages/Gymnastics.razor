@@ -1,0 +1,144 @@
+@page "/gymnastics"
+@using Microsoft.AspNetCore.Components
+@using System
+@inject NavigationManager Navigation
+@inject Blazored.SessionStorage.ISessionStorageService SessionStorage
+@inject SmartDigitalCloset.Data.FavoritesService FavoritesService
+@inject SmartDigitalCloset.Data.InterestService InterestService
+
+<!-- Profile Button -->
+<button class="profile-button" @onclick='() => Navigation.NavigateTo("/profile")' title="Profile">
+    👤
+</button>
+
+<div class="music-gradient-bg">
+    <main class="music-inspiration-main">        <h2 class="music-inspiration-title">Gymnastics Inspiration Gallery</h2>
+        
+        <div style="text-align: center; margin: 15px auto; max-width: 600px;">
+            <input type="text" @bind="searchQuery" @bind:event="oninput" 
+                   placeholder="Search gymnasts..." 
+                   style="width: 100%; padding: 8px 12px; border-radius: 20px; border: 1px solid #ddd; font-size: 16px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);" />
+        </div>
+        
+        <div class="music-cars-gallery">
+            @foreach (var gymnast in FilteredGymnasts.Take(itemsToShow))
+            {
+                <div class="car-card" style="position:relative;">
+                    <img src="@gymnast.Url" alt="@gymnast.Name" loading="lazy" class="artist-img" />
+                    <div class="car-label">@gymnast.Name</div>
+                    <button @onclick="() => SaveFavorite(gymnast)" style="position:absolute;top:8px;right:8px;background:none;border:none;cursor:pointer;">
+                        <span style="font-size:1.3rem;color:@(IsFavorite(gymnast) ? "#e60023" : "#bbb");">&#10084;</span>
+                    </button>
+                </div>
+            }
+        </div>        @if (itemsToShow < FilteredGymnasts.Count)
+        {
+            <button class="sc-btn-loadmore" @onclick="LoadMore">Load More</button>
+        }
+        <button class="save-interest-btn" @onclick="ToggleInterest" style="background: linear-gradient(135deg, #5D4037 0%, #E64A19 100%);">@(_isSaved ? "Remove from Saved Interests" : "Save Interest")</button>
+    </main>
+</div>
+
+@code {
+    private HashSet<string> favoriteNames = new();
+    private string searchQuery = "";
+    private bool _isSaved;
+    private int itemsToShow = 6;
+      private List<(string Url, string Name)> FilteredGymnasts => string.IsNullOrWhiteSpace(searchQuery)
+        ? GymnasticsContent
+        : GymnasticsContent.Where(gymnast => gymnast.Name.Contains(searchQuery, StringComparison.OrdinalIgnoreCase)).ToList();
+    
+    protected override async Task OnInitializedAsync()
+    {
+        var email = await SessionStorage.GetItemAsync<string>("userEmail");
+        if (string.IsNullOrEmpty(email))
+        {
+            Navigation.NavigateTo("/login", true);
+        }
+        else
+        {
+            var favs = await FavoritesService.GetFavoritesAsync(email);
+            favoriteNames = favs.Where(f => f.ItemType == "Gymnastics").Select(f => f.ItemName).ToHashSet();
+            
+            // Check if interest is already saved
+            _isSaved = await InterestService.HasInterestAsync(email, "Gymnastics");
+        }
+    }
+
+    private async Task SaveFavorite((string Url, string Name) gymnast)
+    {
+        try
+        {
+            var email = await SessionStorage.GetItemAsync<string>("userEmail");
+            if (string.IsNullOrEmpty(email)) return;
+            
+            if (favoriteNames.Contains(gymnast.Name))
+            {
+                // Remove from favorites
+                await FavoritesService.RemoveFavoriteAsync(email, gymnast.Name);
+                favoriteNames.Remove(gymnast.Name);
+            }
+            else
+            {
+                // Add to favorites
+                await FavoritesService.AddFavoriteAsync(new SmartDigitalCloset.Data.FavoriteItem
+                {
+                    UserEmail = email,
+                    ItemType = "Gymnastics",
+                    ItemName = gymnast.Name,
+                    ItemImageUrl = gymnast.Url
+                });
+                favoriteNames.Add(gymnast.Name);
+            }
+            StateHasChanged();
+        }
+        catch (Exception)
+        {
+            // Silently ignore exceptions to prevent UI crashes
+            // In a production app, we would log this exception
+        }
+    }
+    
+    private bool IsFavorite((string Url, string Name) gymnast) => favoriteNames.Contains(gymnast.Name);
+    
+    private async Task ToggleInterest()
+    {
+        var email = await SessionStorage.GetItemAsync<string>("userEmail");
+        if (string.IsNullOrEmpty(email))
+            return;
+            
+        _isSaved = !_isSaved;
+        
+        if (_isSaved)
+        {
+            await InterestService.SaveInterestAsync(email, "Gymnastics");
+        }
+        else
+        {
+            await InterestService.RemoveInterestAsync(email, "Gymnastics");
+        }
+        
+        StateHasChanged();
+    }
+
+    private void LoadMore() => itemsToShow = Math.Min(itemsToShow + 6, FilteredGymnasts.Count);
+
+    private List<(string Url, string Name)> GymnasticsContent = new()
+    {
+        ("https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRqpcbXa1D8LQ4I_OELnKjqUEUJUZBoxEG0dQ&s", "Simone Biles (Floor Exercise)"),
+        ("https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSBB9d-SFTetM-6Me1FtPcdRQfDLp9eQaFJ5Q&s", "Nadia Comaneci (Balance Beam)"),
+        ("https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRiZ5Dj02zRZsA9PSBGMvCeKyQ8bBQ4myiysQ&s", "Aly Raisman (Vault)"),
+        ("https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS_QyrC7L6Pptp4FnsBCMReSEluj689VEKzcw&s", "Kohei Uchimura (All-Around)"),
+        ("https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcR1nBRtRbgQseIbgasVvASjL9G6Qzo_kKOr_Q&s", "Laurie Hernandez (Beam)"),
+        ("https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRSPwoJ2eSPMOEZF_PiS3esjJkXColpPDvpYg&s", "Oksana Chusovitina (Vault)"),
+        ("https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSXM5XdcD2iHPCYXKBx0tJw50Ibt0_Rf97TqA&s", "Max Whitlock (Pommel Horse)"),
+        ("https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQQm3a6w4CXwGQSBj8zPYhuMbKKvliD87vzh4dh_m7LghgMHMsFN1xqutEdBja7qGNFRiw&usqp=CAU", "Svetlana Khorkina (Uneven Bars)"),
+        ("https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRvXQWsdNyWxOT1ykysW_ROXUC0EygnyL4ICw&s", "Beth Tweddle (Uneven Bars)"),
+        ("https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcShpWfYk6xykrBQ081cZ1D7XDOmlRUNazy0jQ&s", "Epke Zonderland (High Bar)"),
+        ("https://cdn.britannica.com/69/190969-050-B88D8401/Crescenzi-Maria-Carmen-Rhythmic-Gymnastics-Grand-Prix-February-20-2016.jpg", "Louis Smith (Pommel Horse)"),
+        ("https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQZiLRa344iJGHyBGzWQm4dYuNaWLznHfFO1qhOZC4TPcJMQTW-zTjTODNWrf9swU-yfjo&usqp=CAU", "Artur Dalaloyan (All-Around)"),
+        ("https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSsBYH25QCZf-PWxSzaKxegmIau1J7AJz89Xg&s", "Vanessa Ferrari (Floor Exercise)"),
+        ("https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTS_oZjs25JERUx3rOpiinEWSKDxvQ3Od69Qs1k0rMRtdCXH50IpOoiXhlQd4dUczrDvf4&usqp=CAU", "Denis Ablyazin (Rings)"),
+        ("https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQZ5BaAV-hgOGBZAUvIEIM2dpE9Pdnm5SGpwqtxP_uZgsiHY3_z_aAn8QEUDTXs6yTROjM&usqp=CAU", "Angelina Melnikova (All-Around)")
+    };
+}

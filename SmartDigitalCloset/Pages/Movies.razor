@@ -1,0 +1,145 @@
+@page "/movies"
+@using Microsoft.AspNetCore.Components
+@using System
+@inject NavigationManager Navigation
+@inject Blazored.SessionStorage.ISessionStorageService SessionStorage
+@inject SmartDigitalCloset.Data.FavoritesService FavoritesService
+@inject SmartDigitalCloset.Data.InterestService InterestService
+
+<!-- Profile Button -->
+<button class="profile-button" @onclick='() => Navigation.NavigateTo("/profile")' title="Profile">
+    👤
+</button>
+
+<div class="music-gradient-bg">
+    <main class="music-inspiration-main">        <h2 class="music-inspiration-title">Movies Inspiration Gallery</h2>
+        
+        <div style="text-align: center; margin: 15px auto; max-width: 600px;">
+            <input type="text" @bind="searchQuery" @bind:event="oninput" 
+                   placeholder="Search movies..." 
+                   style="width: 100%; padding: 8px 12px; border-radius: 20px; border: 1px solid #ddd; font-size: 16px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);" />
+        </div>
+        
+        <div class="music-cars-gallery">
+            @foreach (var item in FilteredItems.Take(itemsToShow))
+            {
+                <div class="car-card" style="position:relative;">
+                    <img src="@item.Url" alt="@item.Name" loading="lazy" class="artist-img" />
+                    <div class="car-label">@item.Name</div>
+                    <button @onclick="() => SaveFavorite(item)" style="position:absolute;top:8px;right:8px;background:none;border:none;cursor:pointer;">
+                        <span style="font-size:1.3rem;color:@(IsFavorite(item) ? "#e60023" : "#bbb");">&#10084;</span>
+                    </button>
+                </div>
+            }
+        </div>        @if (itemsToShow < FilteredItems.Count)
+        {
+            <button class="sc-btn-loadmore" @onclick="LoadMore">Load More</button>
+        }
+        <button class="save-interest-btn" @onclick="ToggleInterest" style="background: linear-gradient(135deg, #5D4037 0%, #E64A19 100%);">@(_isSaved ? "Remove from Saved Interests" : "Save Interest")</button>
+    </main>
+</div>
+
+@code {
+    private HashSet<string> favoriteNames = new();
+    private string searchQuery = "";
+    private bool _isSaved;
+    private int itemsToShow = 6;
+    
+    private List<(string Url, string Name)> FilteredItems => string.IsNullOrWhiteSpace(searchQuery)
+        ? MoviesItems
+        : MoviesItems.Where(item => item.Name.Contains(searchQuery, StringComparison.OrdinalIgnoreCase)).ToList();
+    
+    protected override async Task OnInitializedAsync()
+    {
+        var email = await SessionStorage.GetItemAsync<string>("userEmail");
+        if (string.IsNullOrEmpty(email))
+        {
+            Navigation.NavigateTo("/login", true);
+        }
+        else
+        {
+            var favs = await FavoritesService.GetFavoritesAsync(email);
+            favoriteNames = favs.Where(f => f.ItemType == "Movies").Select(f => f.ItemName).ToHashSet();
+            
+            // Check if interest is already saved
+            _isSaved = await InterestService.HasInterestAsync(email, "Movies");
+        }
+    }
+
+    private async Task SaveFavorite((string Url, string Name) item)
+    {
+        try
+        {
+            var email = await SessionStorage.GetItemAsync<string>("userEmail");
+            if (string.IsNullOrEmpty(email)) return;
+            
+            if (favoriteNames.Contains(item.Name))
+            {
+                // Remove from favorites
+                await FavoritesService.RemoveFavoriteAsync(email, item.Name);
+                favoriteNames.Remove(item.Name);
+            }
+            else
+            {
+                // Add to favorites
+                await FavoritesService.AddFavoriteAsync(new SmartDigitalCloset.Data.FavoriteItem
+                {
+                    UserEmail = email,
+                    ItemType = "Movies",
+                    ItemName = item.Name,
+                    ItemImageUrl = item.Url
+                });
+                favoriteNames.Add(item.Name);
+            }
+            StateHasChanged();
+        }
+        catch (Exception)
+        {
+            // Silently ignore exceptions to prevent UI crashes
+            // In a production app, we would log this exception
+        }
+    }
+      
+    private bool IsFavorite((string Url, string Name) item) => favoriteNames.Contains(item.Name);
+    
+    private async Task ToggleInterest()
+    {
+        var email = await SessionStorage.GetItemAsync<string>("userEmail");
+        if (string.IsNullOrEmpty(email))
+            return;
+            
+        _isSaved = !_isSaved;
+        
+        if (_isSaved)
+        {
+            await InterestService.SaveInterestAsync(email, "Movies");
+        }
+        else
+        {
+            await InterestService.RemoveInterestAsync(email, "Movies");
+        }
+        
+        StateHasChanged();
+    }
+
+    private void LoadMore() => itemsToShow = Math.Min(itemsToShow + 6, FilteredItems.Count);
+
+    private List<(string Url, string Name)> MoviesItems = new()
+    {
+        ("https://m.media-amazon.com/images/M/MV5BMjAxMzY3NjcxNF5BMl5BanBnXkFtZTcwNTI5OTM0Mw@@._V1_FMjpg_UX1000_.jpg", "Inception"),
+        ("https://m.media-amazon.com/images/M/MV5BNGEwYjgwOGQtYjg5ZS00Njc1LTk2ZGEtM2QwZWQ2NjdhZTE5XkEyXkFqcGc@._V1_.jpg", "The Godfather"),
+        ("https://images.moviesanywhere.com/bd47f9b7d090170d79b3085804075d41/c6140695-a35f-46e2-adb7-45ed829fc0c0.jpg", "The Dark Knight"),
+        ("https://prod5.agileticketing.net/images/user/loft_4255/Pulp_Fiction_TMDB-jlVOS4D6ledQGxGdL0EIte3TXfL.jpg", "Pulp Fiction"),
+        ("https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcROe1Hh2yNR8Cx19Mp6_hqZlHnwbFebb8LOLg&s", "Forrest Gump"),
+        ("https://images.moviesanywhere.com/7cd69a71b6643254b4ec1f7819923934/94aa20fe-6767-49f4-ba36-cf601f4c5d9c.jpg", "The Matrix"),
+        ("https://m.media-amazon.com/images/M/MV5BOTgyOGQ1NDItNGU3Ny00MjU3LTg2YWEtNmEyYjBiMjI1Y2M5XkEyXkFqcGc@._V1_FMjpg_UX1000_.jpg", "Fight Club"),
+        ("https://resizing.flixster.com/-XZAfHZM39UwaGJIFWKAE8fS0ak=/v3/t/assets/p10543523_p_v8_as.jpg", "Interstellar"),
+        ("https://images.moviesanywhere.com/53dd4d73ac5d1dacd2e577550023dab5/429f797f-c4ca-4d27-8fc5-ca552a5d86e7.jpg", "The Shawshank Redemption"),
+        ("https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQTzd7yRUyPmphOawjkKiPFvNK9hkXoA7wG0g&s", "Gladiator"),
+        ("https://resizing.flixster.com/pqRBiZPskOtK7P6k4Xg8kdcOyQY=/fit-in/705x460/v2/https://resizing.flixster.com/-XZAfHZM39UwaGJIFWKAE8fS0ak=/v3/t/assets/p20056_p_v13_bf.jpg", "Titanic"),
+        ("https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSnqzBDPO2ft-LQ6zmRL5E877-EEodoJkIs0A&s", "Avatar"),
+        ("https://upload.wikimedia.org/wikipedia/en/4/48/Lord_Rings_Return_King.jpg", "The Lord of the Rings"),
+        ("https://www.komar.de/media/catalog/product/cache/5/image/9df78eab33525d08d6e5fb8d27136e95/import/api-v1.1-file-public-files-pim-assets-97-ad-84-62-6284ad972eff292d45ce1a2e-images-d6-63-ba-65-65ba63d65b4bee91324cbdfd-vd-046-p.jpg", "Star Wars"),
+        ("https://m.media-amazon.com/images/M/MV5BYmU1YzFmNTktNTE3OC00YjFkLWE2OTQtMWMzYjJmMTQ4ZTE0XkEyXkFqcGc@._V1_.jpg", "Do Revenge")
+    };
+}

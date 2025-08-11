@@ -1,0 +1,23 @@
+@inject NavigationManager Navigation
+
+<div class="profile-button-container">
+    <button class="floating-profile-btn" @onclick="NavigateToProfile" title="View Profile">
+        <span class="profile-icon">👤</span>
+        <span class="profile-text">Profile</span>
+    </button>
+    <button class="floating-closet-btn" @onclick="NavigateToCloset" title="Manage Closet">
+        <span class="closet-icon">👚</span>
+        <span class="closet-text">Closet</span>
+    </button>
+</div>
+
+@code {
+    private void NavigateToProfile()
+    {
+        Navigation.NavigateTo("/profile");
+    }
+    private void NavigateToCloset()
+    {
+        Navigation.NavigateTo("/closetmanagement");
+    }
+}

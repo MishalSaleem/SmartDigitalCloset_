@@ -1,0 +1,109 @@
+.profile-button-container {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+}
+
+.floating-profile-btn {
+    background: linear-gradient(90deg, #7b2ff2 0%, #f357a8 100%);
+    color: white;
+    border: none;
+    border-radius: 25px;
+    padding: 12px 20px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 1rem;
+    font-weight: 500;
+    cursor: pointer;
+    box-shadow: 0 4px 15px rgba(123, 47, 242, 0.3);
+    transition: transform 0.2s, box-shadow 0.2s;
+    font-family: 'Poppins', 'Inter', Arial, sans-serif;
+}
+
+.floating-profile-btn:hover {
+    transform: translateY(-2px) scale(1.05);
+    box-shadow: 0 6px 20px rgba(123, 47, 242, 0.4);
+}
+
+.profile-icon {
+    font-size: 1.2rem;
+}
+
+.profile-text {
+    font-weight: 600;
+}
+
+.floating-closet-btn {
+    background: linear-gradient(90deg, #f357a8 0%, #7b2ff2 100%);
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 48px;
+    height: 48px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.3rem;
+    font-weight: 600;
+    margin-left: 12px;
+    cursor: pointer;
+    box-shadow: 0 4px 15px rgba(123, 47, 242, 0.25);
+    transition: transform 0.2s, box-shadow 0.2s;
+    position: relative;
+}
+
+.floating-closet-btn:hover {
+    transform: translateY(-2px) scale(1.08);
+    box-shadow: 0 6px 20px rgba(243, 87, 168, 0.35);
+}
+
+.closet-icon {
+    font-size: 1.3rem;
+}
+
+.closet-text {
+    display: none;
+}
+
+@media screen and (max-width: 768px) {
+    .profile-button-container {
+        top: 15px;
+        right: 15px;
+    }
+
+    .floating-profile-btn {
+        padding: 10px 16px;
+        font-size: 0.9rem;
+    }
+
+    .profile-text {
+        display: none;
+    }
+
+    .floating-closet-btn {
+        width: 40px;
+        height: 40px;
+        font-size: 1.1rem;
+    }
+}
+
+@media screen and (max-width: 480px) {
+    .floating-profile-btn {
+        padding: 8px 12px;
+        border-radius: 20px;
+    }
+
+    .floating-closet-btn {
+        width: 34px;
+        height: 34px;
+        font-size: 1rem;
+    }
+
+    .profile-icon {
+        font-size: 1.1rem;
+    }
+} 

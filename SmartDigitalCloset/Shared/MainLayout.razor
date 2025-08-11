@@ -1,0 +1,47 @@
+﻿@inherits LayoutComponentBase
+
+@using Microsoft.AspNetCore.Components.Authorization
+@using SmartDigitalCloset.Shared
+@inject NavigationManager Navigation
+@inject Blazored.SessionStorage.ISessionStorageService SessionStorage
+
+<PageTitle>SmartDigitalCloset</PageTitle>
+
+@code {
+    private bool isLoggedIn = false;
+    private bool shouldShowNav => !Navigation.Uri.EndsWith("/login") && !Navigation.Uri.EndsWith("/signup");
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            var email = await SessionStorage.GetItemAsync<string>("userEmail");
+            isLoggedIn = !string.IsNullOrEmpty(email);
+            StateHasChanged();
+        }
+    }
+}
+
+<div class="page no-gap-layout" style="padding:0;margin:0;">
+    @if (shouldShowNav)
+    {
+        <div class="navigation-buttons">
+            <OutfitPlannerButton />
+            <button class="profile-button" @onclick="NavigateToProfile" title="Profile">
+                👤
+            </button>
+        </div>
+    }
+    <main style="padding:0;margin:0;width:100vw;">
+        <article class="content no-gap-content" style="padding:0;margin:0;">
+            @Body
+        </article>
+    </main>
+</div>
+
+@code {
+    private void NavigateToProfile()
+    {
+        Navigation.NavigateTo("/profile");
+    }
+}

@@ -1,0 +1,152 @@
+@page "/fitness"
+@using Microsoft.AspNetCore.Components
+@using System
+@using SmartDigitalCloset.Shared
+@inject NavigationManager Navigation
+@inject Blazored.SessionStorage.ISessionStorageService SessionStorage
+@inject SmartDigitalCloset.Data.FavoritesService FavoritesService
+@inject SmartDigitalCloset.Data.InterestService InterestService
+
+@inherits InterestPageBase
+
+<div class="music-gradient-bg">
+    <!-- Profile Button -->
+    <div style="position: fixed; top: 20px; right: 20px; z-index: 1000;">
+        <button @onclick='() => Navigation.NavigateTo("/profile")' 
+                style="background: linear-gradient(90deg, #7b2ff2 0%, #f357a8 100%); color: white; border: none; border-radius: 25px; padding: 12px 20px; display: flex; align-items: center; gap: 8px; font-size: 1rem; font-weight: 500; cursor: pointer; box-shadow: 0 4px 15px rgba(123, 47, 242, 0.3); transition: transform 0.2s, box-shadow 0.2s; font-family: 'Poppins', 'Inter', Arial, sans-serif;"
+                onmouseover="this.style.transform='translateY(-2px) scale(1.05)'; this.style.boxShadow='0 6px 20px rgba(123, 47, 242, 0.4)';"
+                onmouseout="this.style.transform=''; this.style.boxShadow='0 4px 15px rgba(123, 47, 242, 0.3)';"
+                title="View Profile">
+            <span style="font-size: 1.2rem;">👤</span>
+            <span style="font-weight: 600;">Profile</span>
+        </button>
+    </div>
+    
+    <main class="music-inspiration-main">
+        <h2 class="music-inspiration-title">Fitness Inspiration Gallery</h2>
+        
+        <div style="text-align: center; margin: 15px auto; max-width: 600px;">
+            <input type="text" @bind="searchQuery" @bind:event="oninput" 
+                   placeholder="Search fitness activities..." 
+                   style="width: 100%; padding: 8px 12px; border-radius: 20px; border: 1px solid #ddd; font-size: 16px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);" />
+        </div>
+        
+        <div class="music-cars-gallery">            @foreach (var item in GetVisibleItems())
+            {
+                <div class="car-card" style="position:relative;">
+                    <img src="@item.Url" alt="@item.Name" loading="lazy" class="artist-img" />
+                    <div class="car-label">@item.Name</div>
+                    <button @onclick="() => SaveFavorite(item)" style="position:absolute;top:8px;right:8px;background:none;border:none;cursor:pointer;">
+                        <span style="font-size:1.3rem;color:@(IsFavorite(item) ? "#e60023" : "#bbb");">&#10084;</span>
+                    </button>
+                </div>
+            }
+        </div>        @if (ShouldShowLoadMore())
+        {            <div style="text-align: center; margin: 20px 0;">
+                <button class="sc-btn-loadmore" @onclick="LoadMore">Load More</button>
+            </div>
+        }
+        <button class="save-interest-btn" @onclick="ToggleInterest" style="background: linear-gradient(135deg, #5D4037 0%, #E64A19 100%);">@(_isSaved ? "Remove from Saved Interests" : "Save Interest")</button>
+    </main>
+</div>
+
+@code {    
+    private HashSet<string> favoriteNames = new();
+    private bool _isSaved;
+
+    protected override List<(string Url, string Name)> GetAllItems() => FitnessItems;
+    
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var email = await SessionStorage.GetItemAsync<string>("userEmail");
+            if (string.IsNullOrEmpty(email))
+            {
+                Navigation.NavigateTo("/login", true);
+            }
+            else
+            {
+                var favs = await FavoritesService.GetFavoritesAsync(email);
+                favoriteNames = favs.Where(f => f.ItemType == "Fitness").Select(f => f.ItemName).ToHashSet();
+            }
+        }        catch (Exception)
+        {
+            // Silently handle exceptions
+            // In a production app, we would log this exception
+        }
+        _isSaved = false;
+    }private async Task SaveFavorite((string Url, string Name) item)
+    {
+        try
+        {
+            var email = await SessionStorage.GetItemAsync<string>("userEmail");
+            if (string.IsNullOrEmpty(email)) return;
+            
+            if (favoriteNames.Contains(item.Name))
+            {
+                // Remove from favorites
+                await FavoritesService.RemoveFavoriteAsync(email, item.Name);
+                favoriteNames.Remove(item.Name);
+            }
+            else
+            {
+                // Add to favorites
+                await FavoritesService.AddFavoriteAsync(new SmartDigitalCloset.Data.FavoriteItem
+                {
+                    UserEmail = email,
+                    ItemType = "Fitness",
+                    ItemName = item.Name,
+                    ItemImageUrl = item.Url
+                });
+                favoriteNames.Add(item.Name);
+            }
+            StateHasChanged();
+        }
+        catch (Exception)
+        {
+            // Silently ignore exceptions to prevent UI crashes
+            // In a production app, we would log this exception
+        }
+    }
+    
+    private bool IsFavorite((string Url, string Name) item) => favoriteNames.Contains(item.Name);
+
+    private List<(string Url, string Name)> FitnessItems = new()
+    {
+        ("https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSu4CsXg7uVBfdc_LaZjKHJ76UaL_EAD8MHtigoWvPV3Lv0k_Wa_WZQ0Yhd4JcBptMWQvU&usqp=CAU", "Push-up"),
+        ("https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRgbxiLgEMWAnO6qjb6pMnsCCVwfhHEOU5chmja_DjL4jSrGQWSaXrm-iwsKlFRdlu9q7A&usqp=CAU", "Squat"),
+        ("https://hips.hearstapps.com/hmg-prod/images/hdm119918mh15842-1545237096.png?crop=0.668xw:1.00xh;0.117xw,0&resize=1200:*", "Plank"),
+        ("https://images.healthshots.com/healthshots/en/uploads/2024/05/02174153/Lunges.jpg", "Lunge"),
+        ("https://media.post.rvohealth.io/wp-content/uploads/2019/09/Athletes-doing-burpee-exercise-in-crossfit-gym-732x549-thumbnail.jpg", "Burpee"),
+        ("https://i0.wp.com/www.muscleandfitness.com/wp-content/uploads/2020/04/Man-Doing-Crunches-At-Home.jpg?quality=86&strip=all", "Crunch"),
+        ("https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQNd4jnVDzgIZJEbEJczHoY1mZuBc-tBN4hkyQz9NG4DiVVf7SUnHUCzauyBQeAmOqFXQE&usqp=CAU", "Deadlift"),        
+        ("https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSo65nh_iViEW2aCKQefceo9jm79-S-YLPsrg&s", "Bench Press"),
+        ("https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcR2mVuRud24fgZrlCoTfBcbvUYcv3qGWsH4ag&s", "Pull-up"),
+        ("https://static01.nyt.com/images/2022/11/08/multimedia/26WNT-ROWING-WORKOUT5-1-310a/26WNT-ROWING-WORKOUT5-1-310a-videoSixteenByNineJumbo1600.jpg", "Rowing"),
+        ("https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS35ssi260oVxY5SVqlpYcj28kGPRQko1YLBThkWfiJNfE6xvv65Z-usXE6wPmClODiYEI&usqp=CAU", "Cycling"),
+        ("https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcT0X_qMth5hZy1tOFueijEhYkAJ68LgEX7g2AGeWikX4ooN6Tog64vDU6nZPRmraz6X2Zw&usqp=CAU", "Running"),
+        ("https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSJzMz4essSFot6ee0s2z1eqnWgcTn85b-jGeO6b-Rwqh7GbVjG68OmxI5n3kGN8h1HtFs&usqp=CAU", "Yoga"),
+        ("https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTrnYrCzAuokweF1DQIiShYa6uen8xKdcnbvA&s", "Pilates"),
+        ("https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSvHqVr18Qc1pEO8HwYjWSa2XeFkzw7yF2FTQ&s", "Jump Rope")
+    };    // Test methods removed for consistency with other interest pages
+      private async Task ToggleInterest()
+    {
+        var email = await SessionStorage.GetItemAsync<string>("userEmail");
+        if (string.IsNullOrEmpty(email))
+            return;
+            
+        _isSaved = !_isSaved;
+        
+        if (_isSaved)
+        {
+            await InterestService.SaveInterestAsync(email, "Fitness");
+        }
+        else
+        {
+            await InterestService.RemoveInterestAsync(email, "Fitness");
+        }
+        
+        StateHasChanged();
+    }
+}

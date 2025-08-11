@@ -1,0 +1,151 @@
+@page "/sports"
+@using Microsoft.AspNetCore.Components
+@using System
+@inject NavigationManager Navigation
+@inject Blazored.SessionStorage.ISessionStorageService SessionStorage
+@inject SmartDigitalCloset.Data.FavoritesService FavoritesService
+@inject SmartDigitalCloset.Data.InterestService InterestService
+@inject IJSRuntime JSRuntime
+
+<!-- Profile Button -->
+<button class="profile-button" @onclick='() => Navigation.NavigateTo("/profile")' title="Profile">
+    👤
+</button>
+
+<div class="music-gradient-bg">
+    <main class="music-inspiration-main">        <h2 class="music-inspiration-title">Sports Inspiration Gallery</h2>
+        
+        <div style="text-align: center; margin: 15px auto; max-width: 600px;">
+            <input type="text" @bind="searchQuery" @bind:event="oninput" 
+                   placeholder="Search sports..." 
+                   style="width: 100%; padding: 8px 12px; border-radius: 20px; border: 1px solid #ddd; font-size: 16px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);" />
+        </div>
+        
+        <div class="music-cars-gallery">
+            @foreach (var sport in FilteredSports.Take(itemsToShow))
+            {
+                <div class="car-card" style="position:relative;">
+                    <img src="@sport.Url" alt="@sport.Name" loading="lazy" class="artist-img" />
+                    <div class="car-label">@sport.Name</div>
+                    <button @onclick="() => SaveFavorite(sport)" style="position:absolute;top:8px;right:8px;background:none;border:none;cursor:pointer;">
+                        <span style="font-size:1.3rem;color:@(IsFavorite(sport) ? "#e60023" : "#bbb");">&#10084;</span>
+                    </button>
+                </div>
+            }
+        </div>
+        @if (itemsToShow < FilteredSports.Count)
+        {
+            <button class="sc-btn-loadmore" @onclick="LoadMore">Load More</button>
+        }
+        <button class="save-interest-btn" @onclick="ToggleInterest" style="background: linear-gradient(135deg, #5D4037 0%, #E64A19 100%);">@(_isSaved ? "Remove from Saved Interests" : "Save Interest")</button>
+    </main>
+</div>
+
+@code {
+    private HashSet<string> favoriteNames = new();
+    private string searchQuery = "";
+    private bool _isSaved;
+    private int itemsToShow = 6;
+    
+    private List<(string Url, string Name)> FilteredSports => string.IsNullOrWhiteSpace(searchQuery)
+        ? SportsCards
+        : SportsCards.Where(sport => sport.Name.Contains(searchQuery, StringComparison.OrdinalIgnoreCase)).ToList();
+        
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var email = await SessionStorage.GetItemAsync<string>("userEmail");
+            if (string.IsNullOrEmpty(email))
+            {
+                Navigation.NavigateTo("/login", true);
+            }
+            else
+            {
+                var favs = await FavoritesService.GetFavoritesAsync(email);
+                favoriteNames = favs.Where(f => f.ItemType == "Sports").Select(f => f.ItemName).ToHashSet();
+                
+                // Check if interest is already saved
+                _isSaved = await InterestService.HasInterestAsync(email, "Sports");
+            }
+        }
+        catch (Exception)
+        {
+            // Silently handle exceptions
+            // In a production app, we would log this exception
+        }        // Initialize with default value, removed local storage dependency
+        _isSaved = false;
+    }
+      private async Task SaveFavorite((string Url, string Name) sport)
+    {
+        try
+        {
+            var email = await SessionStorage.GetItemAsync<string>("userEmail");
+            if (string.IsNullOrEmpty(email)) return;
+            
+            if (favoriteNames.Contains(sport.Name))
+            {
+                // Remove from favorites
+                await FavoritesService.RemoveFavoriteAsync(email, sport.Name);
+                favoriteNames.Remove(sport.Name);
+            }
+            else
+            {
+                // Add to favorites
+                await FavoritesService.AddFavoriteAsync(new SmartDigitalCloset.Data.FavoriteItem
+                {
+                    UserEmail = email,
+                    ItemType = "Sports",
+                    ItemName = sport.Name,
+                    ItemImageUrl = sport.Url
+                });
+                favoriteNames.Add(sport.Name);
+            }
+            StateHasChanged();
+        }
+        catch (Exception)
+        {
+            // Silently ignore exceptions to prevent UI crashes
+            // In a production app, we would log this exception
+        }
+    }
+    
+    private bool IsFavorite((string Url, string Name) sport) => favoriteNames.Contains(sport.Name);    private List<(string Url, string Name)> SportsCards = new()
+    {
+        ("https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQXI2SiakrilUUugvsnObGuBTb2XisPixcN7Wfc59GmBkE2p6QnAgtFC-Xkv_3j66SogRc&usqp=CAU", "Soccer"),
+        ("https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcR9SIhIwS6OVHrGIRa_G_G_kMIg3xktu0I4WQ&s", "Basketball"),
+        ("https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTREVMyAHtpC4JC3AFhkAwHAkECiw57Ql_Hzw&s", "Tennis"),
+        ("https://static01.nyt.com/images/2020/08/24/sports/24mlb-kepner-1/merlin_176084667_69b1099b-0b7e-41ce-bfdf-e407899f10dc-articleLarge.jpg?quality=75&auto=webp&disable=upscale", "Baseball"),
+        ("https://hips.hearstapps.com/hmg-prod/images/female-swimmer-at-the-swimming-pool-royalty-free-image-1568376387.jpg?crop=0.668xw:1.00xh;0.167xw,0&resize=1200:*", "Swimming"),
+        ("https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSbAmvXMpT_dC1yYKWo0pZi3Kbd8zdu2dFzrg&s", "Running"),
+        ("https://framerusercontent.com/images/mQcKcyt3Nb25vMYBSbb47aQ9Kw.jpg", "Cycling"),
+        ("https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQGfBl-NHCcBIcZLvQZ-zFXnPz3blu-7OONsw&s", "Golf"),
+        ("https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRSl1IWqYUPgI1Dg9ZoqsxvCBH4qmV4pR1BQg&s", "Boxing"),
+        ("https://d1l57x9nwbbkz.cloudfront.net/files/s3fs-public/2024-01/blue-mountain-resort-skiing.jpg?VersionId=FPT.LRRp6P4hMuUvAXL77ff0V__q89aS", "Skiing"),
+        ("https://i.guim.co.uk/img/media/e7d6be80326ae1af4029abcdcfd7c25c846fb3c5/0_160_2746_1647/master/2746.jpg?width=1200&height=900&quality=85&auto=format&fit=crop&s=ac5d4b47f9c72248c9fcd6bc801ca8eb", "Surfing"),
+        ("https://upload.wikimedia.org/wikipedia/commons/thumb/6/69/Muralitharan_bowling_to_Adam_Gilchrist.jpg/800px-Muralitharan_bowling_to_Adam_Gilchrist.jpg?20091029143024", "Cricket"),
+        ("https://cdn.britannica.com/95/190895-131-CB863002/volleyball-match-Italy-Russia-Milan-Volleyball-World.jpg", "Volleyball"),
+        ("https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRuICZgo_EH_NrjE3RYv3RqBqSxq6cnfxPYzw&s", "Table Tennis"),
+        ("https://cdn.britannica.com/44/256944-050-8D414329/PV-Sindhu-2020-Tokyo-Olympics.jpg", "Badminton")
+    };    private async Task ToggleInterest()
+    {
+        var email = await SessionStorage.GetItemAsync<string>("userEmail");
+        if (string.IsNullOrEmpty(email))
+            return;
+            
+        _isSaved = !_isSaved;
+        
+        if (_isSaved)
+        {
+            await InterestService.SaveInterestAsync(email, "Sports");
+        }
+        else
+        {
+            await InterestService.RemoveInterestAsync(email, "Sports");
+        }
+        
+        StateHasChanged();
+    }
+
+    private void LoadMore() => itemsToShow = Math.Min(itemsToShow + 6, FilteredSports.Count);
+}

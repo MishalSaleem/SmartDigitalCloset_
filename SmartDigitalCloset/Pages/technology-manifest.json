@@ -1,0 +1,19 @@
+{
+  "technology": [
+    { "title": "Apple iPhone 15 Pro", "image": "apple-iphone-15-pro.jpg" },
+    { "title": "Samsung Galaxy S24 Ultra", "image": "samsung-galaxy-s24-ultra.jpg" },
+    { "title": "Google Pixel 9 Pro", "image": "google-pixel-9-pro.jpg" },
+    { "title": "Microsoft Surface Laptop 6", "image": "microsoft-surface-laptop-6.jpg" },
+    { "title": "Dell XPS 17", "image": "dell-xps-17.jpg" },
+    { "title": "Sony WH-1000XM6 Headphones", "image": "sony-wh-1000xm6-headphones.jpg" },
+    { "title": "Apple Watch Series 10", "image": "apple-watch-series-10.jpg" },
+    { "title": "Amazon Echo Show 15", "image": "amazon-echo-show-15.jpg" },
+    { "title": "DJI Air 3 Drone", "image": "dji-air-3-drone.jpg" },
+    { "title": "Canon EOS R6 Mark II", "image": "canon-eos-r6-mark-ii.jpg" },
+    { "title": "GoPro HERO12 Black", "image": "gopro-hero12-black.jpg" },
+    { "title": "Apple iPad Pro M4", "image": "apple-ipad-pro-m4.jpg" },
+    { "title": "Samsung Galaxy Tab S10+", "image": "samsung-galaxy-tab-s10-plus.jpg" },
+    { "title": "Lenovo ThinkPad X1 Carbon Gen 12", "image": "lenovo-thinkpad-x1-carbon-gen-12.jpg" },
+    { "title": "Nvidia RTX 5090 GPU", "image": "nvidia-rtx-5090-gpu.jpg" }
+  ]
+}

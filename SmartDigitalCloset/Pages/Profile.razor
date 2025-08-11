@@ -1,0 +1,271 @@
+@page "/profile"
+@using Microsoft.AspNetCore.Components
+@using Microsoft.JSInterop
+@using System
+@inject NavigationManager Navigation
+@inject IJSRuntime JSRuntime
+@inject Blazored.LocalStorage.ILocalStorageService LocalStorage
+@inject SmartDigitalCloset.Data.FavoritesService FavoritesService
+@inject SmartDigitalCloset.Data.InterestService InterestService
+
+<div class="profile-page-container">
+    <div class="profile-card">
+        <div class="profile-header">
+            <div class="profile-icon">
+                @if (!string.IsNullOrEmpty(profileImage))
+                {
+                    <img src="@profileImage" alt="Profile" class="profile-image" />
+                }
+                else
+                {
+                    <div class="default-icon">👤</div>
+                }
+                <div class="profile-image-upload">
+                    <input type="file" id="fileInput" accept="image/*" style="display:none" @ref="fileInput" @onchange="HandleFileSelected" />
+                    <button class="upload-button" @onclick="PromptForFile">
+                        <span class="icon">📷</span> Change Photo
+                    </button>
+                </div>
+            </div>
+            <div class="profile-info">
+                <h2 class="profile-name">@userName</h2>
+                @if (showEmail)
+                {
+                    <p class="email-address">@userEmail</p>
+                }
+                @if (showLocation && !string.IsNullOrEmpty(userLocation))
+                {
+                    <p class="location">📍 @userLocation</p>
+                }
+                <p class="joined-date">Member since @joinedDate.ToString("MMMM yyyy")</p>
+                <p class="profile-stats">
+                    <span class="favorites-count">@favoriteCount Favorites</span>
+                    <span class="interests-count">@interestsCount Interests</span>
+                </p>
+                @if (!string.IsNullOrEmpty(userBio))
+                {
+                    <div class="user-bio">
+                        <h3>About Me</h3>
+                        <p>@userBio</p>
+                    </div>
+                }
+            </div>
+        </div>
+
+        <div class="profile-sections">
+            <div class="section">
+                <h3>My Interests</h3>
+                @if (userInterests.Count > 0)
+                {
+                    <div class="interests-grid">
+                        @foreach (var interest in userInterests)
+                        {
+                            <div class="interest-tag">@interest</div>
+                        }
+                    </div>
+                }
+                else
+                {
+                    <div class="empty-state">No interests added yet</div>
+                }
+                <button class="profile-btn secondary" @onclick="ManageInterests">
+                    <span class="icon">➕</span> Manage Interests
+                </button>
+                <button class="profile-btn closet-btn" @onclick="ManageCloset">
+                    <span class="icon">👚</span> Manage Closet
+                </button>
+            </div>
+
+            <div class="section">
+                <h3>Quick Actions</h3>
+                <div class="actions-grid">
+                    <button class="profile-btn outfit-btn" @onclick="NavigateToOutfitPlanner">
+                        <span class="icon">👔</span>
+                        Outfit Planner
+                    </button>
+                    <button class="profile-btn" @onclick="ViewFavorites">
+                        <span class="icon">❤️</span>
+                        View Favorites
+                    </button>
+                    <button class="profile-btn" @onclick="EditProfile">
+                        <span class="icon">✏️</span>
+                        Edit Profile
+                    </button>
+                    <button class="profile-btn" @onclick="GoHome">
+                        <span class="icon">🏠</span>
+                        Back to Home
+                    </button>
+                    <button class="profile-btn danger" @onclick="Logout">
+                        <span class="icon">🚪</span>
+                        Logout
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private string userEmail = string.Empty;
+    private string userName = string.Empty;
+    private DateTime joinedDate = DateTime.MinValue;
+    private string profileImage = string.Empty;
+    private int favoriteCount = 0;
+    private int interestsCount = 0;
+    private List<string> userInterests = new List<string>();
+    private ElementReference fileInput;
+    private string userLocation = string.Empty;
+    private string userBio = string.Empty;
+    private bool showEmail = false;
+    private bool showLocation = false;    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            // Load user data
+            userEmail = await LocalStorage.GetItemAsync<string>("userEmail") ?? string.Empty;
+            userName = await LocalStorage.GetItemAsync<string>("userName") ?? "New User";
+
+            // Use per-user keys for all profile data
+            string emailKey = userEmail.Replace("@", "_").Replace(".", "_");
+            userLocation = await LocalStorage.GetItemAsync<string>($"userLocation_{emailKey}") ?? string.Empty;
+            userBio = await LocalStorage.GetItemAsync<string>($"userBio_{emailKey}") ?? string.Empty;
+            showEmail = await LocalStorage.GetItemAsync<bool>($"showEmail_{emailKey}");
+            showLocation = await LocalStorage.GetItemAsync<bool>($"showLocation_{emailKey}");
+
+            var joinedDateStr = await LocalStorage.GetItemAsync<string>($"joinedDate_{emailKey}");
+            joinedDate = !string.IsNullOrEmpty(joinedDateStr) && DateTime.TryParse(joinedDateStr, out var dt)
+                ? dt
+                : DateTime.Today;
+
+            // Always refresh favorites count on page load to ensure it's up to date
+            await RefreshFavoritesCountAsync();
+
+            // Load profile image (per user)
+            profileImage = await LocalStorage.GetItemAsync<string>($"profileImage_{emailKey}") ?? string.Empty;            // Load interests directly from InterestService to ensure we have the latest data
+            try
+            {
+                // Get interests from InterestService which reads from localStorage
+                userInterests = await InterestService.GetInterestsAsync(userEmail);
+                interestsCount = userInterests.Count;
+            }
+            catch (Exception)
+            {
+                // Fallback to direct localStorage access if the service fails
+                userInterests = await LocalStorage.GetItemAsync<List<string>>($"userInterests_{emailKey}") ?? new List<string>();
+                interestsCount = await LocalStorage.GetItemAsync<int>($"interestsCount_{emailKey}");
+            }
+
+            // Load favorites count from the database
+            try
+            {
+                if (!string.IsNullOrEmpty(userEmail))
+                {
+                    var categoryCounts = await FavoritesService.GetFavoritesCategoryCountAsync(userEmail);
+                    favoriteCount = categoryCounts?.Values.Sum() ?? 0;
+                    await LocalStorage.SetItemAsync($"favoriteCount_{emailKey}", favoriteCount);
+                }
+                else
+                {
+                    favoriteCount = await LocalStorage.GetItemAsync<int>($"favoriteCount_{emailKey}");
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error loading favorites count: {ex.Message}");
+                favoriteCount = 0;
+                try { favoriteCount = await LocalStorage.GetItemAsync<int>($"favoriteCount_{emailKey}"); } catch { favoriteCount = 0; }
+            }
+        }
+        catch (Exception ex)
+        {
+            await JSRuntime.InvokeVoidAsync("console.error", "Error loading profile:", ex.Message);
+        }
+    }
+
+    private void ViewFavorites()
+    {
+        Navigation.NavigateTo("/favorites");
+    }    private void ManageInterests()
+    {
+        Navigation.NavigateTo("/interests");
+    }
+    
+    // Method to refresh interests data
+    private async Task RefreshInterestsAsync()
+    {
+        string emailKey = userEmail.Replace("@", "_").Replace(".", "_");
+        userInterests = await InterestService.GetInterestsAsync(userEmail);
+        interestsCount = userInterests.Count;
+        StateHasChanged();
+    }
+
+    private void EditProfile()
+    {
+        Navigation.NavigateTo("/profile/edit");
+    }
+
+    private async Task Logout()
+    {
+        await LocalStorage.RemoveItemAsync("userEmail");
+        await LocalStorage.RemoveItemAsync("joinedDate");
+        Navigation.NavigateTo("/login");
+    }    private void GoHome()
+    {
+        Navigation.NavigateTo("/interests");
+    }
+
+    private void ManageCloset()
+    {
+        Navigation.NavigateTo("/closetmanagement");
+    }    private void NavigateToOutfitPlanner()
+    {
+        Navigation.NavigateTo("/outfitplannersimple");
+    }
+
+    private async Task PromptForFile()
+    {
+        await JSRuntime.InvokeVoidAsync("clickElement", fileInput);
+    }
+    
+    // Method to refresh the favorites count - can be called from other components
+    public async Task RefreshFavoritesCountAsync()
+    {
+        try
+        {
+            userEmail = await LocalStorage.GetItemAsync<string>("userEmail") ?? string.Empty;
+            if (!string.IsNullOrEmpty(userEmail))
+            {
+                var categoryCounts = await FavoritesService.GetFavoritesCategoryCountAsync(userEmail);
+                favoriteCount = categoryCounts?.Values.Sum() ?? 0;
+                await LocalStorage.SetItemAsync("favoriteCount", favoriteCount);
+                StateHasChanged();
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error refreshing favorites count: {ex.Message}");
+        }
+    }
+
+    private async Task HandleFileSelected(ChangeEventArgs e)
+    {
+        try
+        {
+            // Get the file as base64
+            var imageBase64 = await JSRuntime.InvokeAsync<string>("getFileAsBase64", fileInput);
+            if (!string.IsNullOrEmpty(imageBase64))
+            {
+                // Save the image to LocalStorage (per user)
+                string emailKey = userEmail.Replace("@", "_").Replace(".", "_");
+                profileImage = imageBase64;
+                await LocalStorage.SetItemAsync($"profileImage_{emailKey}", profileImage);
+                StateHasChanged();
+                await JSRuntime.InvokeVoidAsync("alert", "Profile photo updated successfully!");
+            }
+        }
+        catch (Exception ex)
+        {
+            await JSRuntime.InvokeVoidAsync("alert", $"Error uploading image: {ex.Message}");
+        }
+    }
+}

@@ -1,0 +1,101 @@
+[
+  {
+    "Id": 1,
+    "UserId": 1,
+    "Name": "WORK",
+    "Tags": "Work",
+    "PlannedDate": "2025-06-16T00:00:00+05:00",
+    "ItemIds": "[51]",
+    "CreatedAt": "2025-06-16T12:12:18.6074275+05:00"
+  },
+  {
+    "Id": 2,
+    "UserId": 1,
+    "Name": "Dress",
+    "Tags": "Date",
+    "PlannedDate": "2026-06-23T00:00:00",
+    "ItemIds": "[51]",
+    "CreatedAt": "2025-06-16T12:32:56.6169134+05:00"
+  },
+  {
+    "Id": 3,
+    "UserId": 1,
+    "Name": "monday look",
+    "Tags": "Date",
+    "PlannedDate": "2025-06-16T00:00:00+05:00",
+    "ItemIds": "[51]",
+    "CreatedAt": "2025-06-16T12:54:06.4975254+05:00"
+  },
+  {
+    "Id": 4,
+    "UserId": 1,
+    "Name": "tuesday look",
+    "Tags": "Work",
+    "PlannedDate": "2025-06-30T00:00:00",
+    "ItemIds": "[52,51]",
+    "CreatedAt": "2025-06-16T12:54:52.6979678+05:00"
+  },
+  {
+    "Id": 5,
+    "UserId": 1,
+    "Name": "tuesday",
+    "Tags": "Work",
+    "PlannedDate": "2025-06-16T00:00:00+05:00",
+    "ItemIds": "[52,51]",
+    "CreatedAt": "2025-06-16T12:57:17.6219511+05:00"
+  },
+  {
+    "Id": 6,
+    "UserId": 1,
+    "Name": "LOOK",
+    "Tags": "Work",
+    "PlannedDate": "2025-06-16T00:00:00+05:00",
+    "ItemIds": "[51,52]",
+    "CreatedAt": "2025-06-16T13:04:18.4404032+05:00"
+  },
+  {
+    "Id": 7,
+    "UserId": 1,
+    "Name": "WORK",
+    "Tags": "Work",
+    "PlannedDate": "2025-06-16T00:00:00+05:00",
+    "ItemIds": "[51,52]",
+    "CreatedAt": "2025-06-16T13:04:46.0755692+05:00"
+  },
+  {
+    "Id": 8,
+    "UserId": 1,
+    "Name": "look",
+    "Tags": "Date",
+    "PlannedDate": "2025-06-16T00:00:00+05:00",
+    "ItemIds": "[54,55]",
+    "CreatedAt": "2025-06-16T13:36:40.5538515+05:00"
+  },
+  {
+    "Id": 9,
+    "UserId": 1,
+    "Name": "look",
+    "Tags": "Casual",
+    "PlannedDate": "2025-06-16T00:00:00+05:00",
+    "ItemIds": "[54,55]",
+    "CreatedAt": "2025-06-16T13:45:52.9650308+05:00"
+  },
+  {
+    "Id": 42,
+    "UserId": 1,
+    "Name": "Look",
+    "Tags": "Party",
+    "PlannedDate": "2025-06-18T00:00:00",
+    "ItemIds": "[56,58]",
+    "CreatedAt": "2025-06-18T01:15:13.4675062+05:00"
+  },
+  {
+    "Id": 43,
+    "UserId": 1,
+    "Name": "work",
+    "Tags": "Work",
+    "PlannedDate": "2025-06-18T00:00:00+05:00",
+    "ItemIds": "[55,59,60]",
+    "CreatedAt": "2025-06-18T01:17:27.3132523+05:00"
+  }
+]

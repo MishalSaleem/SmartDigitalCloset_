@@ -1,0 +1,145 @@
+@page "/reading"
+@using Microsoft.AspNetCore.Components
+@using System
+@inject NavigationManager Navigation
+@inject Blazored.SessionStorage.ISessionStorageService SessionStorage
+@inject SmartDigitalCloset.Data.FavoritesService FavoritesService
+@inject SmartDigitalCloset.Data.InterestService InterestService
+
+<!-- Profile Button -->
+<button class="profile-button" @onclick='() => Navigation.NavigateTo("/profile")' title="Profile">
+    👤
+</button>
+
+<div class="music-gradient-bg">
+    <main class="music-inspiration-main">        <h2 class="music-inspiration-title">Reading Inspiration Gallery</h2>
+        
+        <div style="text-align: center; margin: 15px auto; max-width: 600px;">
+            <input type="text" @bind="searchQuery" @bind:event="oninput" 
+                   placeholder="Search reading genres..." 
+                   style="width: 100%; padding: 8px 12px; border-radius: 20px; border: 1px solid #ddd; font-size: 16px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);" />
+        </div>
+        
+        <div class="music-cars-gallery">
+            @foreach (var item in FilteredItems.Take(itemsToShow))
+            {
+                <div class="car-card" style="position:relative;">
+                    <img src="@item.Url" alt="@item.Name" loading="lazy" class="artist-img" />
+                    <div class="car-label">@item.Name</div>
+                    <button @onclick="() => SaveFavorite(item)" style="position:absolute;top:8px;right:8px;background:none;border:none;cursor:pointer;">
+                        <span style="font-size:1.3rem;color:@(IsFavorite(item) ? "#e60023" : "#bbb");">&#10084;</span>
+                    </button>
+                </div>
+            }
+        </div>        @if (itemsToShow < FilteredItems.Count)
+        {
+            <button class="sc-btn-loadmore" @onclick="LoadMore">Load More</button>
+        }
+        <button class="save-interest-btn" @onclick="ToggleInterest" style="background: linear-gradient(135deg, #5D4037 0%, #E64A19 100%);">@(_isSaved ? "Remove from Saved Interests" : "Save Interest")</button>
+    </main>
+</div>
+
+@code {
+    private HashSet<string> favoriteNames = new();
+    private string searchQuery = "";
+    private bool _isSaved;
+    private int itemsToShow = 6;
+    
+    private List<(string Url, string Name)> FilteredItems => string.IsNullOrWhiteSpace(searchQuery)
+        ? ReadingItems
+        : ReadingItems.Where(item => item.Name.Contains(searchQuery, StringComparison.OrdinalIgnoreCase)).ToList();
+    
+    protected override async Task OnInitializedAsync()
+    {
+        var email = await SessionStorage.GetItemAsync<string>("userEmail");
+        if (string.IsNullOrEmpty(email))
+        {
+            Navigation.NavigateTo("/login", true);
+        }
+        else
+        {
+            var favs = await FavoritesService.GetFavoritesAsync(email);
+            favoriteNames = favs.Where(f => f.ItemType == "Reading").Select(f => f.ItemName).ToHashSet();
+            
+            // Check if interest is already saved
+            _isSaved = await InterestService.HasInterestAsync(email, "Reading");
+        }
+    }
+
+    private async Task SaveFavorite((string Url, string Name) item)
+    {
+        try
+        {
+            var email = await SessionStorage.GetItemAsync<string>("userEmail");
+            if (string.IsNullOrEmpty(email)) return;
+            
+            if (favoriteNames.Contains(item.Name))
+            {
+                // Remove from favorites
+                await FavoritesService.RemoveFavoriteAsync(email, item.Name);
+                favoriteNames.Remove(item.Name);
+            }
+            else
+            {
+                // Add to favorites
+                await FavoritesService.AddFavoriteAsync(new SmartDigitalCloset.Data.FavoriteItem
+                {
+                    UserEmail = email,
+                    ItemType = "Reading",
+                    ItemName = item.Name,
+                    ItemImageUrl = item.Url
+                });
+                favoriteNames.Add(item.Name);
+            }
+            StateHasChanged();
+        }
+        catch (Exception)
+        {
+            // Silently ignore exceptions to prevent UI crashes
+            // In a production app, we would log this exception
+        }
+    }
+    
+    private bool IsFavorite((string Url, string Name) item) => favoriteNames.Contains(item.Name);
+    
+    private async Task ToggleInterest()
+    {
+        var email = await SessionStorage.GetItemAsync<string>("userEmail");
+        if (string.IsNullOrEmpty(email))
+            return;
+            
+        _isSaved = !_isSaved;
+        
+        if (_isSaved)
+        {
+            await InterestService.SaveInterestAsync(email, "Reading");
+        }
+        else
+        {
+            await InterestService.RemoveInterestAsync(email, "Reading");
+        }
+        
+        StateHasChanged();
+    }
+
+    private void LoadMore() => itemsToShow = Math.Min(itemsToShow + 6, FilteredItems.Count);
+
+    private List<(string Url, string Name)> ReadingItems = new()
+    {
+        ("https://media.npr.org/assets/img/2021/08/13/711gd93ifkl_custom-80dd66e555a05cf605f043ca0095760a75d41be4.jpeg?s=1100&c=50&f=jpeg", "Fiction"),
+        ("https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSKH6E04uguvzEM2JlfK73bnTnaeBQEqC8oKA&s", "Non-Fiction"),
+        ("https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcT29uiwzcbfmd7C6qb7T4CVP2QpAx7TdlRcIA&s", "Mystery"),
+        ("https://cdn.shopify.com/s/files/1/1091/8372/files/Fantasy_Books_-_A_Study_in_Drowning_1000x.jpg?v=1714438811", "Fantasy"),
+        ("https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTn11T8ipi6Ek_cmPXf8pokohX3EU6b4R8nRw&s", "Biography"),
+        ("https://media.springernature.com/full/springer-static/cover-hires/book/978-3-031-23717-1", "Science"),
+        ("https://assets.brightspot.abebooks.a2z.com/dims4/default/29ba2ea/2147483647/strip/true/crop/198x300+0+0/resize/198x300!/format/jpg/quality/90/?url=http%3A%2F%2Fabebooks-brightspot.s3.us-west-2.amazonaws.com%2F52%2F35%2Fe55c9a4a40319171e006198da2cf%2Fbest-history07.jpg", "History"),
+        ("https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcT29KDNQC3UbHGqK9bJg11UyEX2N2rXt0Oj6Q&s", "Romance"),
+        ("https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcR5Hp64tuiHxr8GwMCPsc2wlISOpB6CZuAtIw&s", "Horror"),
+        ("https://kitabmela.com.pk/cdn/shop/products/diary_of_a_wimpy_kid_a_novel_in_cartoons_by_jeff_kinney_39859b1f-7a51-48ad-893a-bb64e184588c.jpg?v=1704900226", "Comics"),
+        ("https://naisoch.com.pk/cdn/shop/files/15_9945db05-ea31-48bf-9f87-7956a1b1f546.jpg?v=1734179602", "Poetry"),
+        ("https://images-eu.ssl-images-amazon.com/images/I/81MWQCQ4VHL._AC_UL600_SR600,600_.jpg", "Adventure"),
+        ("https://schoolmall.pk/cdn/shop/files/Early-Learning-English-SM-7.jpg?v=1724154535", "Children"),
+        ("https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQyhwAuzU6eyD2j1KY9JEGxQtXIiJsdtJvgJA&s", "Self-Help"),
+        ("https://png.pngtree.com/template/20211023/ourmid/pngtree-travel-book-cover-layout-image_707970.png", "Travel")
+    };
+}

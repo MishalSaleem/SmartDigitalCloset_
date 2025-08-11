@@ -1,0 +1,130 @@
+[
+  {
+    "Id": 1,
+    "UserId": 1,
+    "Type": "Tops",
+    "Season": "Summer",
+    "Color": "M",
+    "ImagePath": "Images/closet_90765a4f-ff8d-48ca-9329-5adc447ecd83.jpeg"
+  },
+  {
+    "Id": 2,
+    "UserId": 1,
+    "Type": "Tops",
+    "Season": "Spring",
+    "Color": "WHITE",
+    "ImagePath": "Images/closet_699dc35a-7dd1-45a9-91ce-6f5c0561af69.jpeg"
+  },
+  {
+    "Id": 3,
+    "UserId": 1,
+    "Type": "Accessories",
+    "Season": "Spring",
+    "Color": "BLACK",
+    "ImagePath": "Images/closet_5ae0e41f-7063-47e4-8ab2-09abd5ad8ec7.jpeg"
+  },
+  {
+    "Id": 4,
+    "UserId": 1,
+    "Type": "Tops",
+    "Season": "Spring",
+    "Color": "BLACK",
+    "ImagePath": "Images/closet_d976718b-ab85-40a1-9f54-bdb9a3d5c804.jpeg"
+  },
+  {
+    "Id": 5,
+    "UserId": 1,
+    "Type": "Bottoms",
+    "Season": "Summer",
+    "Color": "black",
+    "ImagePath": "Images/closet_276646a8-1cb8-403f-8371-101a64239b68.jpg"
+  },
+  {
+    "Id": 6,
+    "UserId": 1,
+    "Type": "Tops",
+    "Season": "Spring",
+    "Color": "red",
+    "ImagePath": "Images/closet_1489137d-71ed-4ca9-a0ea-798764621dce.jpg"
+  },
+  {
+    "Id": 7,
+    "UserId": 1,
+    "Type": "Tops",
+    "Season": "Spring",
+    "Color": "blue",
+    "ImagePath": "Images/closet_24a752ae-c2fd-4058-a976-3c84e1966fcd.jpg"
+  },
+  {
+    "Id": 8,
+    "UserId": 1,
+    "Type": "Bottoms",
+    "Season": "Summer",
+    "Color": "black",
+    "ImagePath": "Images/closet_45599035-7d9b-4665-92ef-df3b1dd3e7b9.jpg"
+  },
+  {
+    "Id": 9,
+    "UserId": 1,
+    "Type": "Dresses",
+    "Season": "All Seasons",
+    "Color": "White",
+    "ImagePath": "Images/closet_e4baf2d3-ee92-4be7-9b10-24476b7eb432.jpeg"
+  },
+  {
+    "Id": 10,
+    "UserId": 1,
+    "Type": "Shoes",
+    "Season": "Summer",
+    "Color": "black",
+    "ImagePath": "Images/closet_d74313d6-9f92-48f2-89c0-d59751430bf0.jpeg"
+  },
+  {
+    "Id": 11,
+    "UserId": 1,
+    "Type": "Shoes",
+    "Season": "Summer",
+    "Color": "white",
+    "ImagePath": "Images/closet_4bf7739a-5f09-4c0e-85d7-a33b22626938.jpeg"
+  },
+  {
+    "Id": 12,
+    "UserId": 1,
+    "Type": "Accessories",
+    "Season": "Summer",
+    "Color": "Black",
+    "ImagePath": "Images/closet_153ed6ae-6447-49d5-84e8-4003825bb090.jpeg"
+  },
+  {
+    "Id": 13,
+    "UserId": 1,
+    "Type": "Tops",
+    "Season": "Winter",
+    "Color": "Brown",
+    "ImagePath": "Images/closet_30e8ce66-4a6e-49fc-870b-dd3ad604c12f.jpeg"
+  },
+  {
+    "Id": 14,
+    "UserId": 1,
+    "Type": "Bottoms",
+    "Season": "Summer",
+    "Color": "White",
+    "ImagePath": "Images/closet_2f2170f0-79c0-4c2e-8c24-ad10de3474b2.jpeg"
+  },
+  {
+    "Id": 15,
+    "UserId": 1,
+    "Type": "Bottoms",
+    "Season": "Summer",
+    "Color": "red",
+    "ImagePath": "Images/closet_46b8dada-2860-4e10-a252-3f3d1ab483f7.jpeg"
+  },
+  {
+    "Id": 16,
+    "UserId": 1,
+    "Type": "Dresses",
+    "Season": "Spring",
+    "Color": "White",
+    "ImagePath": "Images/closet_f9e8e0a4-d419-44a7-a497-a089b3af062a.jpeg"
+  }
+]

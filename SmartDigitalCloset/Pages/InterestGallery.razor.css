@@ -1,0 +1,56 @@
+.interest-gallery-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 1.2rem;
+    padding: 2rem 1rem;
+}
+.interest-gallery-card {
+    background: #fff;
+    border-radius: 18px;
+    box-shadow: 0 2px 12px 0 rgba(30,34,90,0.10);
+    overflow: hidden;
+    transition: box-shadow 0.2s, transform 0.18s, border 0.2s;
+    border: 2px solid #f357a8;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.5rem;
+}
+.interest-gallery-card:hover {
+    box-shadow: 0 6px 24px 0 rgba(123,47,242,0.18);
+    transform: scale(1.04);
+    border: 2px solid #7b2ff2;
+}
+.car-card {
+    max-width: 320px;
+    min-width: 220px;
+    height: 320px;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+}
+.car-card img, .artist-img, .interest-gallery-card img {
+    width: 100%;
+    max-width: 320px;
+    height: 220px;
+    max-height: 220px;
+    min-height: 120px;
+    object-fit: cover;
+    border-radius: 18px 18px 0 0;
+    background: #f3f3f3;
+    image-rendering: auto;
+    image-rendering: -webkit-optimize-contrast;
+    display: block;
+    margin: 0 auto;
+}
+@media (max-width: 600px) {
+    .interest-gallery-grid {
+        grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+        gap: 0.7rem;
+        padding: 1rem 0.2rem;
+    }
+    .interest-gallery-card img {
+        height: 120px;
+    }
+}

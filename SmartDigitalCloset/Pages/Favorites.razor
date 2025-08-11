@@ -1,0 +1,296 @@
+@page "/favorites"
+@page "/favorites/{Category}"
+@using System
+@inject Blazored.SessionStorage.ISessionStorageService SessionStorage
+@inject SmartDigitalCloset.Data.FavoritesService FavoritesService
+@inject NavigationManager Navigation
+
+<div class="music-gradient-bg">
+    <main class="music-inspiration-main">
+        <h2 class="music-inspiration-title">Your Favorites</h2>
+        <div class="user-email">@userEmail</div>
+        
+        @if (!string.IsNullOrEmpty(error))
+        {
+            <div class="message-banner">
+                @error
+            </div>
+        }        
+        
+        <div class="action-buttons-container">              <button @onclick="ReloadFavorites" class="action-button">
+                Refresh Favorites
+            </button>
+            <button @onclick="TestDatabaseConnection" class="action-button secondary">
+                Test DB Connection
+            </button>
+            <button @onclick='() => Navigation.NavigateTo("/favorites-dashboard")' class="action-button">
+                View Dashboard
+            </button>
+        </div>
+          
+        <div class="sort-container">
+            <div class="sort-label">Sort by:</div>
+            <button @onclick='() => SortFavorites(SortOption.Newest)' 
+                    class="sort-button @(currentSort == SortOption.Newest ? "active" : "")">
+                Newest
+            </button>
+            <button @onclick='() => SortFavorites(SortOption.Oldest)' 
+                    class="sort-button @(currentSort == SortOption.Oldest ? "active" : "")">
+                Oldest
+            </button>
+            <button @onclick='() => SortFavorites(SortOption.NameAZ)' 
+                    class="sort-button @(currentSort == SortOption.NameAZ ? "active" : "")">
+                Name (A-Z)
+            </button>
+            <button @onclick='() => SortFavorites(SortOption.NameZA)' 
+                    class="sort-button @(currentSort == SortOption.NameZA ? "active" : "")">
+                Name (Z-A)
+            </button>
+        </div>
+        
+        @if (categoryCounts != null && categoryCounts.Any())
+        {
+            <div class="categories-container">
+                <div class="categories-title">Categories (@categoryCounts.Values.Sum() total items)</div>                
+                <div class="categories-buttons">
+                    <button @onclick='() => FilterByCategory(null)' 
+                            class="category-button @(string.IsNullOrEmpty(Category) ? "active" : "")">
+                        All
+                    </button>
+                    @foreach (var category in categoryCounts.OrderByDescending(c => c.Value))
+                    {
+                        <button @onclick='() => FilterByCategory(category.Key)' 
+                                class="category-button @(Category == category.Key ? "active" : "")">
+                            @category.Key (@category.Value)
+                        </button>
+                    }
+                </div>
+            </div>
+        }
+          @if (favorites == null)
+        {
+            <p class="loading-text">Loading your favorites...</p>
+        }
+        else if (!favorites.Any())
+        {
+            <div class="empty-state-container">
+                <p class="empty-state-title">@(string.IsNullOrEmpty(Category) ? "You haven't added any favorites yet." : $"No favorites found in the '{Category}' category.")</p>
+                <p class="empty-state-message">Go to any interest page and click the heart icon on images you like!</p>
+            </div>
+        }
+        else
+        {
+            <div>
+                @foreach (var group in favorites.GroupBy(f => f.ItemType).OrderBy(g => g.Key))
+                {
+                    <h3 class="group-title">@group.Key</h3>
+                    <div class="music-cars-gallery">
+                        @foreach (var fav in group)
+                        {
+                            <div class="car-card">
+                                <img src="@fav.ItemImageUrl" alt="@fav.ItemName" loading="lazy" />
+                                <div class="car-label">@fav.ItemName</div>
+                                <div class="date-label">
+                                    @fav.CreatedAt.ToString("MMM d, yyyy")
+                                </div>
+                                <button @onclick="() => RemoveFavorite(fav)" class="favorite-button">
+                                    <span class="favorite-icon">❤️</span>
+                                </button>
+                            </div>
+                        }
+                    </div>
+                }
+            </div>
+        }
+    </main>
+</div>
+
+@code {
+    [Parameter]
+    public string? Category { get; set; }
+    
+    private List<SmartDigitalCloset.Data.FavoriteItem>? favorites;
+    private Dictionary<string, int>? categoryCounts;
+    private string userEmail = "";
+    private string error = "";
+    
+    private enum SortOption
+    {
+        Newest,
+        Oldest,
+        NameAZ,
+        NameZA
+    }
+    
+    private SortOption currentSort = SortOption.Newest;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            userEmail = await SessionStorage.GetItemAsync<string>("userEmail");
+            if (string.IsNullOrEmpty(userEmail))
+            {
+                Navigation.NavigateTo("/login", true);
+                return;
+            }
+            
+            // First get the category counts for the filter buttons
+            await LoadCategoryCounts();
+            
+            // Then load the favorites
+            await LoadFavorites();
+        }
+        catch (Exception ex)
+        {
+            error = $"Error loading page: {ex.Message}";
+        }
+    }
+    
+    protected override async Task OnParametersSetAsync()
+    {
+        if (userEmail != null)
+        {
+            await LoadFavorites();
+        }
+    }
+
+    private async Task LoadFavorites()
+    {
+        try
+        {
+            if (string.IsNullOrEmpty(Category))
+            {
+                favorites = await FavoritesService.GetFavoritesAsync(userEmail);
+                if (favorites.Count == 0)
+                {
+                    error = "No favorites found. Click the heart icon on images to add favorites!";
+                }
+                else
+                {
+                    error = $"Found {favorites.Count} favorites across {favorites.Select(f => f.ItemType).Distinct().Count()} categories";
+                }
+            }
+            else
+            {
+                favorites = await FavoritesService.GetFavoritesByCategoryAsync(userEmail, Category);
+                if (favorites.Count == 0)
+                {
+                    error = $"No favorites found in the '{Category}' category";
+                }
+                else
+                {
+                    error = $"Found {favorites.Count} favorites in the '{Category}' category";
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            error = $"Error loading favorites: {ex.Message}";
+            favorites = new List<SmartDigitalCloset.Data.FavoriteItem>();
+        }
+    }
+    
+    private async Task LoadCategoryCounts()
+    {
+        try
+        {
+            categoryCounts = await FavoritesService.GetFavoritesCategoryCountAsync(userEmail);
+        }
+        catch (Exception ex)
+        {
+            error = $"Error loading category counts: {ex.Message}";
+            categoryCounts = new Dictionary<string, int>();
+        }
+    }
+    
+    private async Task ReloadFavorites()
+    {
+        error = "Refreshing favorites...";
+        StateHasChanged();
+        await LoadCategoryCounts();
+        await LoadFavorites();
+    }
+      private void FilterByCategory(string? category)
+    {
+        if (string.IsNullOrEmpty(category))
+        {
+            Navigation.NavigateTo("/favorites", false);
+        }
+        else
+        {
+            Navigation.NavigateTo($"/favorites/{category}", false);
+        }
+    }    private async Task RemoveFavorite(SmartDigitalCloset.Data.FavoriteItem item)
+    {
+        try
+        {
+            await FavoritesService.RemoveFavoriteAsync(userEmail, item.ItemName);
+            error = $"Removed {item.ItemName} from favorites";
+            
+            // Update category counts
+            await LoadCategoryCounts();
+            
+            // Update the favorites count in LocalStorage for Profile page
+            var totalCount = categoryCounts?.Values.Sum() ?? 0;
+            await SessionStorage.SetItemAsync("favoriteCount", totalCount);
+            
+            // Check if removing this item means we need to navigate away from empty category
+            if (!string.IsNullOrEmpty(Category))
+            {
+                var categoryFavs = await FavoritesService.GetFavoritesByCategoryAsync(userEmail, Category);
+                if (categoryFavs.Count == 0)
+                {
+                    // Navigate back to all favorites
+                    Navigation.NavigateTo("/favorites", false);
+                    return;
+                }
+            }
+            
+            await LoadFavorites();
+        }
+        catch (Exception ex)
+        {
+            error = $"Error removing favorite: {ex.Message}";
+        }
+    }
+    
+    private async Task TestDatabaseConnection()
+    {
+        try
+        {
+            var result = await FavoritesService.TestDatabaseConnectionAsync();
+            error = result.Message;
+        }
+        catch (Exception ex)
+        {
+            error = $"Error testing database connection: {ex.Message}";
+        }
+    }
+
+    private void SortFavorites(SortOption sortOption)
+    {
+        if (favorites == null || !favorites.Any())
+            return;
+            
+        currentSort = sortOption;
+        
+        switch (sortOption)
+        {
+            case SortOption.Newest:
+                favorites = favorites.OrderByDescending(f => f.CreatedAt).ToList();
+                break;
+            case SortOption.Oldest:
+                favorites = favorites.OrderBy(f => f.CreatedAt).ToList();
+                break;
+            case SortOption.NameAZ:
+                favorites = favorites.OrderBy(f => f.ItemName).ToList();
+                break;
+            case SortOption.NameZA:
+                favorites = favorites.OrderByDescending(f => f.ItemName).ToList();
+                break;
+        }
+        
+        StateHasChanged();
+    }
+}

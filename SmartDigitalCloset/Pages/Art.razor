@@ -1,0 +1,154 @@
+@page "/art"
+@using Microsoft.AspNetCore.Components
+@using System
+@using SmartDigitalCloset.Shared
+@inject NavigationManager Navigation
+@inject Blazored.SessionStorage.ISessionStorageService SessionStorage
+@inject SmartDigitalCloset.Data.FavoritesService FavoritesService
+@inject SmartDigitalCloset.Data.InterestService InterestService
+
+@inherits InterestPageBase
+
+<div class="music-gradient-bg">
+    <!-- Profile Button -->
+    <div style="position: fixed; top: 20px; right: 20px; z-index: 1000;">
+        <button @onclick='() => Navigation.NavigateTo("/profile")' 
+                style="background: linear-gradient(90deg, #7b2ff2 0%, #f357a8 100%); color: white; border: none; border-radius: 25px; padding: 12px 20px; display: flex; align-items: center; gap: 8px; font-size: 1rem; font-weight: 500; cursor: pointer; box-shadow: 0 4px 15px rgba(123, 47, 242, 0.3); transition: transform 0.2s, box-shadow 0.2s; font-family: 'Poppins', 'Inter', Arial, sans-serif;"
+                onmouseover="this.style.transform='translateY(-2px) scale(1.05)'; this.style.boxShadow='0 6px 20px rgba(123, 47, 242, 0.4)';"
+                onmouseout="this.style.transform=''; this.style.boxShadow='0 4px 15px rgba(123, 47, 242, 0.3)';"
+                title="View Profile">
+            <span style="font-size: 1.2rem;">👤</span>
+            <span style="font-weight: 600;">Profile</span>
+        </button>
+    </div>
+    
+    <main class="music-inspiration-main">
+        <h2 class="music-inspiration-title">Art Inspiration Gallery</h2>
+        
+        <div style="text-align: center; margin: 15px auto; max-width: 600px;">
+            <input type="text" @bind="searchQuery" @bind:event="oninput" 
+                   placeholder="Search artworks..." 
+                   style="width: 100%; padding: 8px 12px; border-radius: 20px; border: 1px solid #ddd; font-size: 16px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);" />
+        </div>
+        
+        <div class="music-cars-gallery">
+            @foreach (var art in GetVisibleItems())
+            {
+                <div class="car-card" style="position:relative;">
+                    <img src="@art.Url" alt="@art.Name" loading="lazy" class="artist-img" />
+                    <div class="car-label">@art.Name</div>
+                    <button @onclick="() => SaveFavorite(art)" style="position:absolute;top:8px;right:8px;background:none;border:none;cursor:pointer;">
+                        <span style="font-size:1.3rem;color:@(IsFavorite(art) ? "#e60023" : "#bbb");">&#10084;</span>
+                    </button>
+                </div>
+            }
+        </div>        @if (ShouldShowLoadMore())
+        {            <div style="text-align: center; margin: 20px 0;">
+                <button class="sc-btn-loadmore" @onclick="LoadMore">Load More</button>
+            </div>
+        }
+        <button class="save-interest-btn" @onclick="ToggleInterest" style="background: linear-gradient(135deg, #5D4037 0%, #E64A19 100%);">@(_isSaved ? "Remove from Saved Interests" : "Save Interest")</button>
+    </main>
+</div>
+
+@code {
+    private HashSet<string> favoriteNames = new();
+    private bool _isSaved;
+    
+    private List<(string Url, string Name)> ArtWorks = new()
+    {
+        ("https://upload.wikimedia.org/wikipedia/commons/thumb/e/ea/Van_Gogh_-_Starry_Night_-_Google_Art_Project.jpg/1200px-Van_Gogh_-_Starry_Night_-_Google_Art_Project.jpg", "Starry Night - Van Gogh"),
+        ("https://uploads1.wikiart.org/00475/images/salvador-dali/w1siziisijm4njq3mcjdlfsiccisimnvbnzlcnqilcitcxvhbgl0esa5mcatcmvzaxplidiwmdb4mjawmfx1mdazzsjdxq.jpg!Large.jpg", "The Persistence of Memory - Dali"),
+        ("https://upload.wikimedia.org/wikipedia/commons/thumb/e/ec/Mona_Lisa%2C_by_Leonardo_da_Vinci%2C_from_C2RMF_retouched.jpg/1200px-Mona_Lisa%2C_by_Leonardo_da_Vinci%2C_from_C2RMF_retouched.jpg", "Mona Lisa - Da Vinci"),
+        ("https://www.edvardmunch.org/assets/img/paintings/the-scream.jpg", "The Scream - Munch"),
+        ("https://upload.wikimedia.org/wikipedia/commons/c/ce/Girl_with_a_Pearl_Earring.jpg", "Girl with a Pearl Earring - Vermeer"),
+        ("https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRYbZMEVRASXZHrzSQ3eyFSt5W7CFBHSNnvfw&s", "The Kiss - Klimt"),
+        ("https://www.pablopicasso.org/assets/img/paintings/guernica3.jpg", "Guernica - Picasso"),
+        ("https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRDWQL2TVEoWF9IuME7YvgghJYQPsoXAlTzow&s", "The Great Wave - Hokusai"),
+        ("https://www.sireseyewear.com/cdn/shop/articles/Water_Lilies_1916_-_1919_-_Claude_Monet.webp?crop=center&height=1200&v=1722913097&width=1200", "Water Lilies - Monet"),
+        ("https://cdn.britannica.com/47/24347-050-9719FF7E/American-Gothic-beaverboard-Grant-Wood-Art-Institute-1930.jpg", "American Gothic - Wood"),
+        ("https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRT7RdKKQX8fuEU7y_L5pIeyvZMxJ6YqtlNlQ&s", "The Birth of Venus - Botticelli"),
+        ("https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS9Sm_4AkaCd9e-PC_uoaiCQURhJBIulsC3Bw&s", "The Creation of Adam - Michelangelo"),
+        ("https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcR5kReCyF4OkJCtFgnR_OBBFN4H9NIgY0Q_lg&s", "The Night Watch - Rembrandt"),
+        ("https://s3-us-west-2.amazonaws.com/collections.lacma.org-images/remote_images/ma-19261-WEB.jpg?bDx166TZJmBwkffvv9FkR_bwnLCyof1F", "Campbell's Soup Cans - Warhol"),
+        ("https://upload.wikimedia.org/wikipedia/commons/b/b4/Vassily_Kandinsky%2C_1913_-_Composition_7.jpg", "Composition VII - Kandinsky"),
+        ("https://upload.wikimedia.org/wikipedia/en/e/e5/Magritte_TheSonOfMan.jpg", "The Son of Man - Magritte"),
+        ("https://upload.wikimedia.org/wikipedia/en/4/4a/No._5%2C_1948.jpg", "No. 5, 1948 - Pollock"),
+        ("https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRpcyQV8fbHZLXfbC-HATCRNBpolguEEpk1DQ&s", "The Garden of Earthly Delights - Bosch"),
+        ("https://upload.wikimedia.org/wikipedia/commons/thumb/3/31/Las_Meninas%2C_by_Diego_Vel%C3%A1zquez%2C_from_Prado_in_Google_Earth.jpg/1200px-Las_Meninas%2C_by_Diego_Vel%C3%A1zquez%2C_from_Prado_in_Google_Earth.jpg", "Las Meninas - Velázquez"),
+        ("https://cdn.britannica.com/34/114834-050-F5310205/Liberty-Leading-the-People-oil-canvas-Eugene-1830.jpg", "Liberty Leading the People - Delacroix")
+    };
+
+    protected override List<(string Url, string Name)> GetAllItems() => ArtWorks;
+    
+    protected override async Task OnInitializedAsync()
+    {
+        var email = await SessionStorage.GetItemAsync<string>("userEmail");
+        if (string.IsNullOrEmpty(email))
+        {
+            Navigation.NavigateTo("/login", true);
+        }
+        else
+        {
+            var favs = await FavoritesService.GetFavoritesAsync(email);
+            favoriteNames = favs.Where(f => f.ItemType == "Art").Select(f => f.ItemName).ToHashSet();
+            
+            // Check if interest is already saved
+            _isSaved = await InterestService.HasInterestAsync(email, "Art");
+        }
+    }
+
+    private async Task SaveFavorite((string Url, string Name) art)
+    {
+        try
+        {
+            var email = await SessionStorage.GetItemAsync<string>("userEmail");
+            if (string.IsNullOrEmpty(email)) return;
+            
+            if (favoriteNames.Contains(art.Name))
+            {
+                // Remove from favorites
+                await FavoritesService.RemoveFavoriteAsync(email, art.Name);
+                favoriteNames.Remove(art.Name);
+            }
+            else
+            {
+                // Add to favorites
+                await FavoritesService.AddFavoriteAsync(new SmartDigitalCloset.Data.FavoriteItem
+                {
+                    UserEmail = email,
+                    ItemType = "Art",
+                    ItemName = art.Name,
+                    ItemImageUrl = art.Url
+                });
+                favoriteNames.Add(art.Name);
+            }
+            StateHasChanged();
+        }
+        catch (Exception)
+        {
+            // Silently ignore exceptions to prevent UI crashes
+            // In a production app, we would log this exception
+        }
+    }    private bool IsFavorite((string Url, string Name) art) => favoriteNames.Contains(art.Name);
+    
+    private async Task ToggleInterest()
+    {
+        var email = await SessionStorage.GetItemAsync<string>("userEmail");
+        if (string.IsNullOrEmpty(email))
+            return;
+            
+        _isSaved = !_isSaved;
+        
+        if (_isSaved)
+        {
+            await InterestService.SaveInterestAsync(email, "Art");
+        }
+        else
+        {
+            await InterestService.RemoveInterestAsync(email, "Art");
+        }
+        
+        StateHasChanged();
+    }
+}

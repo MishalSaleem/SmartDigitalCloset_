@@ -1,0 +1,2 @@
+# Format: email,password,birthdate(yyyy-MM-dd),firstName,lastName,profileImageBase64
+# Example: user@example.com,password,2000-01-01,John,Doe,

@@ -1,0 +1,214 @@
+@page "/favorites-dashboard"
+@using System
+@inject Blazored.SessionStorage.ISessionStorageService SessionStorage
+@inject SmartDigitalCloset.Data.FavoritesService FavoritesService
+@inject NavigationManager Navigation
+
+<div class="music-gradient-bg">
+    <main class="music-inspiration-main">
+        <h2 class="music-inspiration-title">Favorites Dashboard</h2>
+        <div class="user-email">@userEmail</div>
+        
+        @if (!string.IsNullOrEmpty(error))
+        {
+            <div class="message-banner">
+                @error
+            </div>
+        }
+        
+        <div class="action-buttons-container">            
+            <button @onclick="ReloadData" class="action-button">
+                Refresh Dashboard
+            </button>
+            <button @onclick='() => Navigation.NavigateTo("/favorites")' class="action-button">
+                View Favorites
+            </button>
+            <button @onclick='() => Navigation.NavigateTo("/")' class="action-button secondary">
+                Back to Home
+            </button>
+        </div>
+        
+        @if (isLoading)
+        {
+            <div class="loading-text">
+                <p>Loading dashboard data...</p>
+            </div>
+        }
+        else if (categoryCounts == null || !categoryCounts.Any())
+        {
+            <div class="empty-state-container">
+                <p class="empty-state-title">You haven't added any favorites yet.</p>
+                <p class="empty-state-message">Go to any interest page and click the heart icon on images you like!</p>
+            </div>
+        }
+        else
+        {
+            <div class="dashboard-grid">
+                <!-- Summary Card -->
+                <div class="dashboard-card">
+                    <h3 class="dashboard-card-title">Favorites Summary</h3>
+                    <div class="summary-stats">
+                        <div class="stat-block">
+                            <p class="stat-value">@totalFavorites</p>
+                            <p class="stat-label">Total Favorites</p>
+                        </div>
+                        <div class="stat-block">
+                            <p class="stat-value">@categoryCounts.Count</p>
+                            <p class="stat-label">Categories</p>
+                        </div>
+                        <div class="stat-block">
+                            <p class="stat-value">@(mostRecentFavorite?.CreatedAt.ToString("MMM d") ?? "None")</p>
+                            <p class="stat-label">Last Added</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Category Breakdown Card -->
+                <div class="dashboard-card">
+                    <h3 class="dashboard-card-title">Category Breakdown</h3>
+                    <div class="category-list">
+                        @foreach (var category in categoryCounts.OrderByDescending(c => c.Value))
+                        {
+                            <div class="category-item">
+                                <div class="category-badge">
+                                    <div class="category-color" style="background-color: @GetCategoryColor(category.Key)"></div>
+                                    <span class="category-name">@category.Key</span>
+                                </div>
+                                <div class="category-count">
+                                    <span class="count-value">@category.Value</span>
+                                    <a href="/favorites/@category.Key" class="view-link">View</a>
+                                </div>
+                            </div>
+                            <div class="category-progress">
+                                <div class="progress-bar" style="width: @(Math.Min(100, (category.Value * 100 / totalFavorites)))%; background-color: @GetCategoryColor(category.Key)"></div>
+                            </div>
+                        }
+                    </div>
+                </div>
+                
+                <!-- Recent Favorites Card -->
+                @if (mostRecentFavorites != null && mostRecentFavorites.Any())
+                {
+                    <div class="dashboard-card">
+                        <h3 class="dashboard-card-title">Recently Added</h3>
+                        <div class="recent-favorites-grid">
+                            @foreach (var favorite in mostRecentFavorites)
+                            {
+                                <div class="recent-item">
+                                    <img src="@favorite.ItemImageUrl" alt="@favorite.ItemName" />
+                                    <div class="recent-item-name">
+                                        @favorite.ItemName
+                                    </div>
+                                    <div class="recent-item-category" style="background-color: @GetCategoryColor(favorite.ItemType)">
+                                        @favorite.ItemType
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+    </main>
+</div>
+
+@code {
+    private Dictionary<string, int>? categoryCounts;
+    private List<SmartDigitalCloset.Data.FavoriteItem>? mostRecentFavorites;
+    private SmartDigitalCloset.Data.FavoriteItem? mostRecentFavorite;
+    private int totalFavorites = 0;
+    private string userEmail = "";
+    private string error = "";
+    private bool isLoading = true;
+    
+    // Category colors mapping
+    private Dictionary<string, string> categoryColors = new()
+    {
+        { "Fitness", "#e74c3c" },
+        { "Music", "#3498db" },
+        { "Art", "#9b59b6" },
+        { "Fashion", "#f39c12" },
+        { "Travel", "#2ecc71" },
+        { "Reading", "#1abc9c" },
+        { "Movies", "#d35400" },
+        { "Sports", "#27ae60" },
+        { "Photography", "#8e44ad" },
+        { "Cooking", "#e67e22" },
+        { "Baking", "#f1c40f" },
+        { "DIY", "#7f8c8d" },
+        { "Gardening", "#16a085" },
+        { "Technology", "#2980b9" }
+    };
+    
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            isLoading = true;            userEmail = await SessionStorage.GetItemAsync<string>("userEmail");
+            if (string.IsNullOrEmpty(userEmail))
+            {
+                Navigation.NavigateTo("/login", true);
+                return;
+            }
+            
+            await LoadDashboardData();
+        }
+        catch (Exception ex)
+        {
+            error = $"Error loading dashboard: {ex.Message}";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+      private async Task LoadDashboardData()
+    {
+        try
+        {
+            // Get category counts
+            categoryCounts = await FavoritesService.GetFavoritesCategoryCountAsync(userEmail);
+            
+            // Calculate total favorites
+            totalFavorites = categoryCounts?.Values.Sum() ?? 0;
+            
+            // Update the favorites count in LocalStorage for Profile page
+            await SessionStorage.SetItemAsync("favoriteCount", totalFavorites);
+            
+            // Get all favorites to find most recent
+            var allFavorites = await FavoritesService.GetFavoritesAsync(userEmail);
+            
+            // Sort by creation date descending
+            mostRecentFavorites = allFavorites
+                .OrderByDescending(f => f.CreatedAt)
+                .Take(8)
+                .ToList();
+                
+            mostRecentFavorite = mostRecentFavorites.FirstOrDefault();
+            
+            error = $"Loaded dashboard data successfully. Found {totalFavorites} favorites across {categoryCounts?.Count ?? 0} categories.";
+        }
+        catch (Exception ex)
+        {
+            error = $"Error loading dashboard data: {ex.Message}";
+        }
+    }
+    
+    private async Task ReloadData()
+    {
+        isLoading = true;
+        await LoadDashboardData();
+        isLoading = false;
+    }
+    
+    private string GetCategoryColor(string category)
+    {
+        if (categoryColors.TryGetValue(category, out var color))
+        {
+            return color;
+        }
+        
+        // Generate a consistent color for categories not in our mapping
+        return $"#{Math.Abs(category.GetHashCode() % 0xFFFFFF):X6}";
+    }
+}

@@ -1,0 +1,153 @@
+@page "/baking"
+@using Microsoft.AspNetCore.Components
+@using System
+@inject NavigationManager Navigation
+@inject Blazored.SessionStorage.ISessionStorageService SessionStorage
+@inject SmartDigitalCloset.Data.FavoritesService FavoritesService
+@inject SmartDigitalCloset.Data.InterestService InterestService
+@inject IJSRuntime JSRuntime
+
+<!-- Profile Button -->
+<button class="profile-button" @onclick='() => Navigation.NavigateTo("/profile")' title="Profile">
+    👤
+</button>
+
+<div class="music-gradient-bg">
+    <main class="music-inspiration-main">        <h2 class="music-inspiration-title">Baking Inspiration Gallery</h2>
+        
+        <div style="text-align: center; margin: 15px auto; max-width: 600px;">
+            <input type="text" @bind="searchQuery" @bind:event="oninput" 
+                   placeholder="Search baking recipes..." 
+                   style="width: 100%; padding: 8px 12px; border-radius: 20px; border: 1px solid #ddd; font-size: 16px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);" />
+        </div>
+        
+        <div class="music-cars-gallery">
+            @foreach (var dish in FilteredDishes.Take(itemsToShow))
+            {
+                <div class="car-card" style="position:relative;">
+                    <img src="@dish.Url" alt="@dish.Name" loading="lazy" class="artist-img" />
+                    <div class="car-label">@dish.Name</div>
+                    <button @onclick="() => SaveFavorite(dish)" style="position:absolute;top:8px;right:8px;background:none;border:none;cursor:pointer;">
+                        <span style="font-size:1.3rem;color:@(IsFavorite(dish) ? "#e60023" : "#bbb");">&#10084;</span>
+                    </button>
+                </div>
+            }
+        </div>
+        @if (itemsToShow < FilteredDishes.Count)
+        {
+            <button class="sc-btn-loadmore" @onclick="LoadMore">Load More</button>
+        }
+        <button class="save-interest-btn" @onclick="ToggleInterest" style="background: linear-gradient(135deg, #5D4037 0%, #E64A19 100%);">@(_isSaved ? "Remove from Saved Interests" : "Save Interest")</button>
+    </main>
+</div>
+
+@code {    
+    private HashSet<string> favoriteNames = new();
+    private string searchQuery = "";
+    private bool _isSaved;
+    private int itemsToShow = 6;
+    
+    private List<(string Url, string Name)> FilteredDishes =>
+        string.IsNullOrWhiteSpace(searchQuery)
+            ? BakingDishes
+            : BakingDishes.Where(dish => !string.IsNullOrEmpty(dish.Name) && dish.Name.Contains(searchQuery ?? string.Empty, StringComparison.OrdinalIgnoreCase)).ToList();
+
+    protected override async Task OnInitializedAsync()
+    {
+        var email = await SessionStorage.GetItemAsync<string>("userEmail");
+        if (string.IsNullOrEmpty(email))
+        {
+            Navigation.NavigateTo("/login", true);
+        }
+        else
+        {
+            var favs = await FavoritesService.GetFavoritesAsync(email);
+            favoriteNames = favs.Where(f => f.ItemType == "Baking").Select(f => f.ItemName).ToHashSet();
+            
+            // Check if interest is already saved
+            _isSaved = await InterestService.HasInterestAsync(email, "Baking");
+        }
+    }
+
+    private async Task SaveFavorite((string Url, string Name) dish)
+    {
+        try
+        {
+            var email = await SessionStorage.GetItemAsync<string>("userEmail");
+            if (string.IsNullOrEmpty(email)) return;
+            
+            if (favoriteNames.Contains(dish.Name))
+            {
+                // Remove from favorites
+                await FavoritesService.RemoveFavoriteAsync(email, dish.Name);
+                favoriteNames.Remove(dish.Name);
+            }
+            else
+            {
+                // Add to favorites
+                await FavoritesService.AddFavoriteAsync(new SmartDigitalCloset.Data.FavoriteItem
+                {
+                    UserEmail = email,
+                    ItemType = "Baking",
+                    ItemName = dish.Name,
+                    ItemImageUrl = dish.Url
+                });
+                favoriteNames.Add(dish.Name);
+            }
+            StateHasChanged();
+        }
+        catch (Exception)
+        {
+            // Silently ignore exceptions to prevent UI crashes
+            // In a production app, we would log this exception
+        }
+    }
+    
+    private bool IsFavorite((string Url, string Name) dish) => favoriteNames.Contains(dish.Name);
+    
+    private async Task ToggleInterest()
+    {
+        var email = await SessionStorage.GetItemAsync<string>("userEmail");
+        if (string.IsNullOrEmpty(email))
+            return;
+            
+        _isSaved = !_isSaved;
+        
+        if (_isSaved)
+        {
+            await InterestService.SaveInterestAsync(email, "Baking");
+        }
+        else
+        {
+            await InterestService.RemoveInterestAsync(email, "Baking");
+        }
+        
+        StateHasChanged();
+    }
+
+    private void LoadMore() => itemsToShow = Math.Min(itemsToShow + 6, FilteredDishes.Count);
+
+    private List<(string Url, string Name)> BakingDishes = new()
+    {
+        ("https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQYeoQcQNKZI9uxPV6M7mzFDrmCF5d_6Y656Q&s", "Chocolate Cake"),
+        ("https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQUv95U8ixDFNL8n2zA5Jws-4N1PUrG7bzo_A&s", "Croissant"),
+        ("https://joyfoodsunshine.com/wp-content/uploads/2018/02/best-chocolate-chip-cookie-recipe-6.jpg", "Chocolate Chip Cookies"),
+        ("https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSqjKbCxqhTEGQZQ522qFE9rCeZy4HqCex44A&s", "Bagel"),
+        ("https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRjEwfNRJa_zMnMFcGu2C7zRoskOjfGEfBLPw&s", "Apple Pie"),
+        ("https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTZrf43rJ2FAOBamQ9DrVaIIdh0ZtlRxXSnWw&s", "Macarons"),
+        ("https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcToy1zywcquLuxpD3tCGOvhByWvaRlBS1HteQ&s", "Banana Bread"),
+        ("https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSDZQChn46Q_JRs5orbVxXdTdulMXp-iTqBTDJk_9zevFH8yQWCAc3nZjQpE8YUOa80uac&usqp=CAU", "Blueberry Muffins"),
+        ("https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTV37TpKtRtJ0IRlXN4cNbkVGE_oM5HQbyBkw&s", "Cinnamon Rolls"),
+        ("https://preppykitchen.com/wp-content/uploads/2022/05/Strawberry-Cake-Feature.jpg", "Strawberry Shortcake"),
+        ("https://www.rainbownourishments.com/wp-content/uploads/2023/03/vegan-carrot-cake-1-500x500.jpg", "Carrot Cake"),
+        ("https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRH7K-XrHqSWVSBIELDJIOaoBKM2rVq_wX38g&s", "Donuts"),
+        ("https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRBkIv6Tz-s98W7wZnfJg288Ab4oW8tzPHX9A&s", "Eclairs"),
+        ("https://i0.wp.com/marissa-makes.com/wp-content/uploads/2022/01/Lemon20Meringue-19.jpg?fit=4000%2C5000&ssl=1", "Lemon Meringue Pie"),
+        ("https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSodMzV4vSQ2gXLflWDWNP_gO7HTOngy1bcfg&s", "Pavlova"),
+        ("https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQ7Jrhmkwl6wAoZlbwcM9tdCQuFfTQ-qCelLg&s", "Red Velvet Cake"),
+        ("https://sallysbakingaddiction.com/wp-content/uploads/2019/04/scone-varieties.jpg", "Scones"),
+        ("https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSj3Y7NmzyYkh6E5FWvNmEFOzSQFBQR0j0Z-Q&s", "Tiramisu"),
+        ("https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTtw-ExzHnJaeHTLidhpqb5AsG0ZKVH27M2ZQ&s", "Vanilla Cupcakes"),
+        ("https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSR47sRLyZTITw3_ybV3lGQV6Oa8vzuvx1Seg&s", "Profiteroles")
+    };
+}

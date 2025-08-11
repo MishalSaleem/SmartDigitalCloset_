@@ -1,0 +1,56 @@
+@page "/pinterest-gallery"
+@using Microsoft.AspNetCore.Hosting
+@using Microsoft.AspNetCore.Components.Forms
+@inject IWebHostEnvironment Environment
+
+<link href="/css/PinterestGallery.razor.css" rel="stylesheet" />
+
+<div class="pinterest-gallery-container">
+    <div class="pinterest-gallery-header">
+        <h2>Pinterest-Style Gallery</h2>
+        <InputFile OnChange="HandleFileSelected" accept="image/*" />
+    </div>
+    @if (!string.IsNullOrEmpty(UploadedImageName))
+    {
+        <div class="pinterest-gallery-center">
+            <img src="@($"/uploads/{UploadedImageName}")" alt="Uploaded Image" class="pinterest-gallery-img-full" />
+        </div>
+    }
+</div>
+
+@code {
+    [Inject] NavigationManager Navigation { get; set; } = default!;
+    [Inject] Blazored.SessionStorage.ISessionStorageService SessionStorage { get; set; } = default!;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var email = await SessionStorage.GetItemAsync<string>("userEmail");
+        if (string.IsNullOrEmpty(email))
+        {
+            Navigation.NavigateTo("/login", true);
+        }
+    }
+
+    private string? UploadedImageName;
+
+    private async Task HandleFileSelected(InputFileChangeEventArgs e)
+    {
+        var file = e.File;
+        var extension = Path.GetExtension(file.Name).ToLowerInvariant();
+
+        if (extension != ".jpg" && extension != ".jpeg" && extension != ".png" && extension != ".gif")
+        {
+            UploadedImageName = null;
+            return; // Optionally show an error message
+        }
+
+        var uniqueFileName = $"{Guid.NewGuid()}{extension}";
+        var savePath = Path.Combine(Environment.WebRootPath, "uploads", uniqueFileName);
+
+        using var stream = file.OpenReadStream(maxAllowedSize: 10 * 1024 * 1024); // 10 MB limit
+        using var fileStream = File.Create(savePath);
+        await stream.CopyToAsync(fileStream);
+
+        UploadedImageName = uniqueFileName;
+    }
+}

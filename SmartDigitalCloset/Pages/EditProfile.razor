@@ -1,0 +1,267 @@
+@page "/profile/edit"
+@using Microsoft.AspNetCore.Components
+@using Microsoft.JSInterop
+@using System
+@inject NavigationManager Navigation
+@inject IJSRuntime JSRuntime
+@inject Blazored.LocalStorage.ILocalStorageService LocalStorage
+
+<div class="edit-profile-page-container">
+    <div class="edit-profile-card">
+        <h1 class="page-title">Edit Profile</h1>
+        
+        <div class="profile-image-section">
+            <div class="profile-icon">
+                @if (!string.IsNullOrEmpty(profileImage))
+                {
+                    <img src="@profileImage" alt="Profile" class="profile-image" />
+                }
+                else
+                {
+                    <div class="default-icon">👤</div>
+                }
+                <div class="profile-image-upload">
+                    <input type="file" id="fileInput" accept="image/*" style="display:none" @ref="fileInput" @onchange="HandleFileSelected" />
+                    <button class="upload-button" @onclick="PromptForFile">
+                        <span class="icon">📷</span> Change Photo
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div class="edit-form">
+            @if (showSaveSuccess)
+            {
+                <div class="success-message">Profile updated successfully!</div>
+            }
+            
+            <div class="form-group">
+                <label for="userName">Name</label>
+                <input id="userName" type="text" class="form-control" @bind="userName" />
+            </div>
+            
+            <div class="form-group">
+                <label for="userEmail">Email</label>
+                <input id="userEmail" type="email" class="form-control" @bind="userEmail" />
+            </div>
+            
+            <div class="form-group">
+                <label for="userUsername">Username</label>
+                <input id="userUsername" type="text" class="form-control" @bind="userUsername" />
+            </div>
+            
+            <div class="form-group">
+                <label for="userLocation">Location</label>
+                <input id="userLocation" type="text" class="form-control" @bind="userLocation" />
+            </div>
+            
+            <div class="form-group">
+                <label for="userBio">Bio</label>
+                <textarea id="userBio" class="form-control bio-input" @bind="userBio" placeholder="Tell us about yourself..."></textarea>
+            </div>
+            
+            <div class="form-group">
+                <label for="userTheme">Color Theme</label>
+                <select id="userTheme" class="form-control" @bind="userTheme">
+                    <option value="default">Default Brown/Orange</option>
+                    <option value="dark">Dark Mode</option>
+                    <option value="light">Light Mode</option>
+                    <option value="vibrant">Vibrant Colors</option>
+                </select>
+            </div>
+            
+            <div class="form-group privacy-section">
+                <h3>Privacy Settings</h3>
+                <div class="checkbox-group">
+                    <input id="showEmail" type="checkbox" @bind="showEmail" />
+                    <label for="showEmail">Show email on profile</label>
+                </div>
+                <div class="checkbox-group">
+                    <input id="showLocation" type="checkbox" @bind="showLocation" />
+                    <label for="showLocation">Show location on profile</label>
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <h3>Change Password</h3>
+                <div class="password-section">
+                    <input id="currentPassword" type="password" placeholder="Current Password" class="form-control" @bind="currentPassword" />
+                    <input id="newPassword" type="password" placeholder="New Password" class="form-control" @bind="newPassword" />
+                    <input id="confirmPassword" type="password" placeholder="Confirm New Password" class="form-control" @bind="confirmPassword" />
+                    <button class="change-password-btn" @onclick="ChangePassword">Update Password</button>
+                </div>
+                @if (!string.IsNullOrEmpty(passwordError))
+                {
+                    <div class="error-message">@passwordError</div>
+                }
+                @if (passwordSuccess)
+                {
+                    <div class="success-message">Password updated successfully!</div>
+                }
+            </div>
+            
+            <div class="action-buttons">
+                <button class="save-button" @onclick="SaveChanges">Save Changes</button>
+                <button class="cancel-button" @onclick="CancelEdit">Cancel</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private string userName = string.Empty;
+    private string userEmail = string.Empty;
+    private string userUsername = string.Empty;
+    private string userLocation = string.Empty;
+    private string userBio = string.Empty;
+    private string userTheme = "default";
+    private string profileImage = string.Empty;
+    private bool showEmail = false;
+    private bool showLocation = false;
+    private bool showSaveSuccess = false;
+    private ElementReference fileInput;
+    
+    // Password change fields
+    private string currentPassword = string.Empty;
+    private string newPassword = string.Empty;
+    private string confirmPassword = string.Empty;
+    private string passwordError = string.Empty;
+    private bool passwordSuccess = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            // Load user email
+            userEmail = await LocalStorage.GetItemAsync<string>("userEmail") ?? string.Empty;
+            
+            // Create a unique key based on email to ensure user-specific storage
+            string emailKey = userEmail.Replace("@", "_").Replace(".", "_");
+            
+            // Load user data from LocalStorage using per-user keys
+            userName = await LocalStorage.GetItemAsync<string>($"userName_{emailKey}") ?? string.Empty;
+            userUsername = await LocalStorage.GetItemAsync<string>($"userUsername_{emailKey}") ?? string.Empty;
+            userLocation = await LocalStorage.GetItemAsync<string>($"userLocation_{emailKey}") ?? string.Empty;
+            userBio = await LocalStorage.GetItemAsync<string>($"userBio_{emailKey}") ?? string.Empty;
+            userTheme = await LocalStorage.GetItemAsync<string>($"userTheme_{emailKey}") ?? "default";
+            profileImage = await LocalStorage.GetItemAsync<string>($"profileImage_{emailKey}") ?? string.Empty;
+            showEmail = await LocalStorage.GetItemAsync<bool>($"showEmail_{emailKey}");
+            showLocation = await LocalStorage.GetItemAsync<bool>($"showLocation_{emailKey}");
+        }
+        catch (Exception ex)
+        {
+            await JSRuntime.InvokeVoidAsync("console.error", "Error loading user data:", ex.Message);
+        }
+    }
+
+    private async Task PromptForFile()
+    {
+        await JSRuntime.InvokeVoidAsync("clickElement", fileInput);
+    }
+
+    private async Task HandleFileSelected(ChangeEventArgs e)
+    {
+        try
+        {
+            // Get the file as base64
+            var imageBase64 = await JSRuntime.InvokeAsync<string>("getFileAsBase64", fileInput);
+            
+            if (!string.IsNullOrEmpty(imageBase64))
+            {
+                // Create a unique key based on email
+                string emailKey = userEmail.Replace("@", "_").Replace(".", "_");
+                
+                // Save the image to LocalStorage with user-specific key
+                profileImage = imageBase64;
+                await LocalStorage.SetItemAsync($"profileImage_{emailKey}", profileImage);
+                StateHasChanged();
+                await JSRuntime.InvokeVoidAsync("alert", "Profile photo updated successfully!");
+            }
+        }
+        catch (Exception ex)
+        {
+            await JSRuntime.InvokeVoidAsync("alert", $"Error uploading image: {ex.Message}");
+        }
+    }
+
+    private async Task SaveChanges()
+    {
+        try
+        {
+            // Create a unique key based on email
+            string emailKey = userEmail.Replace("@", "_").Replace(".", "_");
+            
+            // Save common email for login
+            await LocalStorage.SetItemAsync("userEmail", userEmail);
+            
+            // Save all profile data to LocalStorage with user-specific keys
+            await LocalStorage.SetItemAsync($"userName_{emailKey}", userName);
+            await LocalStorage.SetItemAsync($"userUsername_{emailKey}", userUsername);
+            await LocalStorage.SetItemAsync($"userLocation_{emailKey}", userLocation);
+            await LocalStorage.SetItemAsync($"userBio_{emailKey}", userBio);
+            await LocalStorage.SetItemAsync($"userTheme_{emailKey}", userTheme);
+            await LocalStorage.SetItemAsync($"profileImage_{emailKey}", profileImage);
+            await LocalStorage.SetItemAsync($"showEmail_{emailKey}", showEmail);
+            await LocalStorage.SetItemAsync($"showLocation_{emailKey}", showLocation);
+            
+            // Show success message
+            showSaveSuccess = true;
+            await Task.Delay(3000); // Show the message for 3 seconds
+            showSaveSuccess = false;
+            
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            await JSRuntime.InvokeVoidAsync("alert", $"Error saving profile: {ex.Message}");
+        }
+    }
+
+    private async Task ChangePassword()
+    {
+        passwordError = string.Empty;
+        passwordSuccess = false;
+        
+        // Simple validation for demo purposes
+        if (string.IsNullOrEmpty(currentPassword))
+        {
+            passwordError = "Current password is required";
+            return;
+        }
+        
+        if (string.IsNullOrEmpty(newPassword))
+        {
+            passwordError = "New password is required";
+            return;
+        }
+        
+        if (newPassword.Length < 8)
+        {
+            passwordError = "Password must be at least 8 characters";
+            return;
+        }
+        
+        if (newPassword != confirmPassword)
+        {
+            passwordError = "New passwords do not match";
+            return;
+        }
+        
+        // In a real app, we would verify the current password and update it in the database
+        // For demo purposes, we'll just show success
+        passwordSuccess = true;
+        currentPassword = string.Empty;
+        newPassword = string.Empty;
+        confirmPassword = string.Empty;
+        
+        // Reset success message after 3 seconds
+        await Task.Delay(3000);
+        passwordSuccess = false;
+        StateHasChanged();
+    }
+
+    private void CancelEdit()
+    {
+        Navigation.NavigateTo("/profile");
+    }
+}

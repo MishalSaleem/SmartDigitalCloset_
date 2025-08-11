@@ -1,0 +1,158 @@
+@page "/music"
+@using Microsoft.AspNetCore.Components
+@using System
+@using SmartDigitalCloset.Shared
+@inject NavigationManager Navigation
+@inject Blazored.SessionStorage.ISessionStorageService SessionStorage
+@inject SmartDigitalCloset.Data.FavoritesService FavoritesService
+@inject SmartDigitalCloset.Data.InterestService InterestService
+
+<div class="music-gradient-bg">
+    <!-- Profile Button -->
+    <div style="position: fixed; top: 20px; right: 20px; z-index: 1000;">
+        <button @onclick='() => Navigation.NavigateTo("/profile")' 
+                style="background: linear-gradient(90deg, #7b2ff2 0%, #f357a8 100%); color: white; border: none; border-radius: 25px; padding: 12px 20px; display: flex; align-items: center; gap: 8px; font-size: 1rem; font-weight: 500; cursor: pointer; box-shadow: 0 4px 15px rgba(123, 47, 242, 0.3); transition: transform 0.2s, box-shadow 0.2s; font-family: 'Poppins', 'Inter', Arial, sans-serif;"
+                onmouseover="this.style.transform='translateY(-2px) scale(1.05)'; this.style.boxShadow='0 6px 20px rgba(123, 47, 242, 0.4)';"
+                onmouseout="this.style.transform=''; this.style.boxShadow='0 4px 15px rgba(123, 47, 242, 0.3)';"
+                title="View Profile">
+            <span style="font-size: 1.2rem;">👤</span>
+            <span style="font-weight: 600;">Profile</span>
+        </button>
+    </div>
+    
+    <main class="music-inspiration-main"><h2 class="music-inspiration-title">Music Artists Inspiration Gallery</h2>
+        
+        <div style="text-align: center; margin: 15px auto; max-width: 600px;">
+            <input type="text" @bind="searchQuery" @bind:event="oninput" 
+                   placeholder="Search music artists..." 
+                   style="width: 100%; padding: 8px 12px; border-radius: 20px; border: 1px solid #ddd; font-size: 16px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);" />
+        </div>
+        
+        <div class="music-cars-gallery">
+            @foreach (var artist in FilteredArtists.Take(itemsToShow))
+            {
+                <div class="car-card" style="position:relative;">
+                    <img src="@artist.Url" alt="@artist.Name" loading="lazy" class="artist-img" />
+                    <div class="car-label">@artist.Name</div>
+                    <button @onclick="() => SaveFavorite(artist)" style="position:absolute;top:8px;right:8px;background:none;border:none;cursor:pointer;">
+                        <span style="font-size:1.3rem;color:@(IsFavorite(artist) ? "#e60023" : "#bbb");">&#10084;</span>
+                    </button>
+                </div>
+            }
+        </div>        @if (itemsToShow < FilteredArtists.Count)
+        {
+            <button class="sc-btn-loadmore" @onclick="LoadMore">Load More</button>
+        }
+        <button class="save-interest-btn" @onclick="ToggleInterest" style="background: linear-gradient(135deg, #5D4037 0%, #E64A19 100%);">@(_isSaved ? "Remove from Saved Interests" : "Save Interest")</button>
+    </main>
+</div>
+
+@code {
+    private HashSet<string> favoriteNames = new();
+    private string searchQuery = "";
+    private bool _isSaved;
+    private int itemsToShow = 6;
+    
+    private List<(string Url, string Name)> FilteredArtists => string.IsNullOrWhiteSpace(searchQuery)
+        ? MusicArtists
+        : MusicArtists.Where(artist => artist.Name.Contains(searchQuery, StringComparison.OrdinalIgnoreCase)).ToList();
+    
+    protected override async Task OnInitializedAsync()
+    {
+        var email = await SessionStorage.GetItemAsync<string>("userEmail");
+        if (string.IsNullOrEmpty(email))
+        {
+            Navigation.NavigateTo("/login", true);
+        }
+        else
+        {
+            var favs = await FavoritesService.GetFavoritesAsync(email);
+            favoriteNames = favs.Where(f => f.ItemType == "Music").Select(f => f.ItemName).ToHashSet();
+            
+            // Check if interest is already saved
+            _isSaved = await InterestService.HasInterestAsync(email, "Music");
+        }
+    }
+
+    private async Task SaveFavorite((string Url, string Name) item)
+    {
+        try
+        {
+            var email = await SessionStorage.GetItemAsync<string>("userEmail");
+            if (string.IsNullOrEmpty(email)) return;
+            
+            if (favoriteNames.Contains(item.Name))
+            {
+                // Remove from favorites
+                await FavoritesService.RemoveFavoriteAsync(email, item.Name);
+                favoriteNames.Remove(item.Name);
+            }
+            else
+            {
+                // Add to favorites
+                await FavoritesService.AddFavoriteAsync(new SmartDigitalCloset.Data.FavoriteItem
+                {
+                    UserEmail = email,
+                    ItemType = "Music",
+                    ItemName = item.Name,
+                    ItemImageUrl = item.Url
+                });
+                favoriteNames.Add(item.Name);
+            }
+            StateHasChanged();
+        }
+        catch (Exception)
+        {
+            // Silently ignore exceptions to prevent UI crashes
+            // In a production app, we would log this exception
+        }
+    }
+    
+    private bool IsFavorite((string Url, string Name) item) => favoriteNames.Contains(item.Name);
+    
+    private async Task ToggleInterest()
+    {
+        var email = await SessionStorage.GetItemAsync<string>("userEmail");
+        if (string.IsNullOrEmpty(email))
+            return;
+            
+        _isSaved = !_isSaved;
+        
+        if (_isSaved)
+        {
+            await InterestService.SaveInterestAsync(email, "Music");
+        }
+        else
+        {
+            await InterestService.RemoveInterestAsync(email, "Music");
+        }
+        
+        StateHasChanged();
+    }
+
+    private void LoadMore() => itemsToShow = Math.Min(itemsToShow + 6, FilteredArtists.Count);
+
+    private List<(string Url, string Name)> MusicArtists = new()
+    {
+        ("https://i.discogs.com/oukqjevgcba-XZDRDvjEaYoUCFeIVvfDWCa4xd16UWI/rs:fit/g:sm/q:90/h:600/w:597/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9BLTQzNzgy/ODQtMTcxODgxMjM3/MC05MjI5LnBuZw.jpeg", "Sabrina Carpenter"),
+        ("https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQURMIwNNdNnClTG0eV3Xxxv91tyCN0A6g1Mw&s", "Justin Bieber"),
+        ("https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcR7NTc0WUEPBMi9-gWWBDtqesFWL5pzPAjcBQ&s", "Taylor Swift"),
+        ("https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcT2DMkiPkDNvdqv9htNeR8W2wec-OAz8bBUsA&s", "The Weeknd"),
+        ("https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcR0rOxJSy3or3LUkuEZdvybFX_KtoVBumjk1Q&s", "Billie Eilish"),
+        ("https://preview.redd.it/olivia-rodrigo-looks-beautiful-in-new-photoshoot-for-her-v0-sjzyqmbgls8b1.jpg?width=640&crop=smart&auto=webp&s=fb0d3e39621e5ca6e730388147125dd1bc39bf8f", "Olivia Rodrigo"),
+        ("https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQyHi5bkctiyRMfU7aPDG6UqPp7j_4CyBAl0A&s", "Post Malone"),
+        ("https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTYuxIkWR-beaFYhYQ3nVyoX0wZbJB_tTL1tg&s", "Dua Lipa"),
+        ("https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRzMAIpco_PNIY00zC9sCdXDZmCpjUiUoho-Q&s", "Ariana Grande"),
+        ("https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQm63zkDHR5RD1XxgOaaCiCGDo-mLfD3I9vdw&s", "Drake"),
+        ("https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSneT8wBm3-D8sJ8vOsfQFaVRJ1nEUKwFRseA&s", "Ed Sheeran"),
+        ("https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRj8mojZSNTDpKPe6zTPiPIwZS7EcrVS6kXnw&s", "SZA"),
+        ("https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQrRC92YJFM1UAYaFsdp1p2OcL6XslekNjc-YSwfEWPfEnuYMMgaIh_FSCEH-VsRwTW4bY&usqp=CAU", "Doja Cat"),
+        ("https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcR5Uck85ceWPyQvCtYxO7BpnZPYC-FaYXKiO0GX2HQFnN-h--DYUW8mRAS1KYLNgUUu8Uc&usqp=CAU", "Travis Scott"),
+        ("https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQdRxnijfSTyNiG5cOIR35UKnyV6SOeW_RDqg&s", "Bad Bunny"),
+        ("https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTo5NeD2a2N9SkFpGTAflQbq8fMOLXb9wGj-g&s", "Harry Styles"),
+        ("https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQiAwPtpoQ3FECZ-kldxdFBDu8v8TXGpIdpDQ&s", "Lizzo"),
+        ("https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQQKR33uBLfWbqulnIs3ZlSsvg8uIbM3JL6MA&s", "Jack Harlow"),
+        ("https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTdcgTgmhR3pv2iDVoXvrRc1k6uRfpSBEs9yQ&s", "BLACKPINK"),
+        ("https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTuW8zlnLy4WdlGI9qtf2vGJFv-ZPyL6gsZCw&s", "Jung Kook (BTS)")
+    };
+}

@@ -1,0 +1,150 @@
+@page "/diy"
+@using Microsoft.AspNetCore.Components
+@using System
+@inject NavigationManager Navigation
+@inject Blazored.SessionStorage.ISessionStorageService SessionStorage
+@inject SmartDigitalCloset.Data.FavoritesService FavoritesService
+@inject SmartDigitalCloset.Data.InterestService InterestService
+@inject IJSRuntime JSRuntime
+
+<!-- Profile Button -->
+<button class="profile-button" @onclick='() => Navigation.NavigateTo("/profile")' title="Profile">
+    👤
+</button>
+
+<div class="music-gradient-bg">
+    <main class="music-inspiration-main">        <h2 class="music-inspiration-title">DIY Inspiration Gallery</h2>
+        
+        <div style="text-align: center; margin: 15px auto; max-width: 600px;">
+            <input type="text" @bind="searchQuery" @bind:event="oninput" 
+                   placeholder="Search DIY projects..." 
+                   style="width: 100%; padding: 8px 12px; border-radius: 20px; border: 1px solid #ddd; font-size: 16px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);" />
+        </div>
+        
+        <div class="music-cars-gallery">
+            @foreach (var item in FilteredItems.Take(itemsToShow))
+            {
+                <div class="car-card" style="position:relative;">
+                    <img src="@item.Url" alt="@item.Name" loading="lazy" class="artist-img" />
+                    <div class="car-label">@item.Name</div>
+                    <button @onclick="() => SaveFavorite(item)" style="position:absolute;top:8px;right:8px;background:none;border:none;cursor:pointer;">
+                        <span style="font-size:1.3rem;color:@(IsFavorite(item) ? "#e60023" : "#bbb");">&#10084;</span>
+                    </button>
+                </div>
+            }
+        </div>
+        @if (itemsToShow < FilteredItems.Count)
+        {
+            <button class="sc-btn-loadmore" @onclick="LoadMore">Load More</button>
+        }
+        <button class="save-interest-btn" @onclick="ToggleInterest" style="background: linear-gradient(135deg, #5D4037 0%, #E64A19 100%);">@(_isSaved ? "Remove from Saved Interests" : "Save Interest")</button>
+    </main>
+</div>
+
+@code {
+    private HashSet<string> favoriteNames = new();
+    private string searchQuery = "";
+    private bool _isSaved;
+    private int itemsToShow = 6;
+    
+    private List<(string Url, string Name)> FilteredItems => string.IsNullOrWhiteSpace(searchQuery)
+        ? DIYItems
+        : DIYItems.Where(item => item.Name.Contains(searchQuery, StringComparison.OrdinalIgnoreCase)).ToList();
+
+    protected override async Task OnInitializedAsync()
+    {
+        var email = await SessionStorage.GetItemAsync<string>("userEmail");
+        if (string.IsNullOrEmpty(email))
+        {
+            Navigation.NavigateTo("/login", true);
+        }
+        else
+        {
+            var favs = await FavoritesService.GetFavoritesAsync(email);
+            favoriteNames = favs.Where(f => f.ItemType == "DIY").Select(f => f.ItemName).ToHashSet();
+            
+            // Check if interest is already saved
+            _isSaved = await InterestService.HasInterestAsync(email, "DIY");
+        }
+    }
+    
+    private async Task SaveFavorite((string Url, string Name) item)
+    {
+        try
+        {
+            var email = await SessionStorage.GetItemAsync<string>("userEmail");
+            if (string.IsNullOrEmpty(email)) return;
+            
+            if (favoriteNames.Contains(item.Name))
+            {
+                // Remove from favorites
+                await FavoritesService.RemoveFavoriteAsync(email, item.Name);
+                favoriteNames.Remove(item.Name);
+            }
+            else
+            {
+                // Add to favorites
+                await FavoritesService.AddFavoriteAsync(new SmartDigitalCloset.Data.FavoriteItem
+                {
+                    UserEmail = email,
+                    ItemType = "DIY",
+                    ItemName = item.Name,
+                    ItemImageUrl = item.Url
+                });
+                favoriteNames.Add(item.Name);
+            }
+            StateHasChanged();
+        }
+        catch (Exception)
+        {
+            // Silently ignore exceptions to prevent UI crashes
+            // In a production app, we would log this exception
+        }
+    }
+    
+    private bool IsFavorite((string Url, string Name) item) => favoriteNames.Contains(item.Name);
+    
+    private async Task ToggleInterest()
+    {
+        var email = await SessionStorage.GetItemAsync<string>("userEmail");
+        if (string.IsNullOrEmpty(email))
+            return;
+            
+        _isSaved = !_isSaved;
+        
+        if (_isSaved)
+        {
+            await InterestService.SaveInterestAsync(email, "DIY");
+        }
+        else
+        {
+            await InterestService.RemoveInterestAsync(email, "DIY");
+        }
+        
+        StateHasChanged();
+    }
+
+    private void LoadMore() => itemsToShow = Math.Min(itemsToShow + 6, FilteredItems.Count);
+
+    private List<(string Url, string Name)> DIYItems = new()
+    {
+        ("https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRAWM_2wgSeC9v-RpRLxncbQMsGNW699zMNVA&s", "Hammer"),
+        ("https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSMLIVB1cWZZezA5i0D1Wrl7rM-HCr_5o-hQg&s", "Screwdriver"),
+        ("https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS06uvDwFARAxNpj5otEBRogmXo5aqGLVFY6Q&s", "Wrench"),
+        ("https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS19oA1AyEkCV53AksS3xp0I0h19_dpdvJhfA&s", "Drill"),
+        ("https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSL8ZD3Nk4p9REbcLQQwJq8_2tYWPAntWrGQQ&s", "Saw"),
+        ("https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSe4GfQ2Fh3JX0xPKpmCMv6FCc9cKNBiIOXmQ&s", "Tape Measure"),
+        ("https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcR4V3BqFx0lwOZEFaNwukuO4QWGmlHPdM3cIQ&s", "Level"),
+        ("https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSZ31tNB8vmLKpBHDRrUfW4Ky6ralGdsV_L9w&s", "Pliers"),
+        ("https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQYLa99Js1427vtvcqU_HRN5jEQPaONIexE3g&s", "Garden"),
+        ("https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSyNNRjOIh-pooFz9FoJZpOX2TY2ErLb0CxrA&s", "Bottles"),
+        ("https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSNIPLZ3-VD8j21bEiwT1qnVAH7VK70XTlo-Q&s", "Butterfly"),
+        ("https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRMe5OHumS6n952jZYNejCXCJK7qVxsWg1mgA&s", "Heart"),
+        ("https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTneRQbylJvsOjOrRc1Two4dDj9biIDN4ywCt_yUWKCKxtlO5nH9wib0uR65JDxZ_zVk1M&usqp=CAU", "Raisin"),
+        ("https://i.pinimg.com/236x/7f/ed/9d/7fed9d3e6021369ad7e1a7c226a7946f.jpg", "Drawing"),
+        ("https://i.pinimg.com/736x/ad/d0/2b/add02be9a081c1c08ae848971411e3ca.jpg", "Flowers"),
+        ("https://cdn.shopify.com/s/files/1/0525/6917/8282/files/11._Bold_Artwork.jpg?v=1727703277", "Room"),
+        ("https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQeVrU5w3K8AJTul77l3pAzjKw5YZy3xqqV_g&s", "Eggs"),
+        ("https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRX363qG0VIRgwHUrhPhfW9AGcyc_ZEVIbULg&s", "Home")
+    };
+}

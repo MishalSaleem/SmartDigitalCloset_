@@ -1,0 +1,367 @@
+@page "/outfitplanner"
+@using Microsoft.AspNetCore.Components.Forms
+@using SmartDigitalCloset.Data
+@using System.Text.Json
+@inject IConfiguration Configuration
+@inject IJSRuntime JSRuntime
+@inject NavigationManager NavigationManager
+@implements IDisposable
+
+<div class="outfit-planner-container">
+    <h1 class="page-title">Outfit Planner</h1>
+
+    @if (!isEditing)
+    {
+        <div class="outfit-actions">
+            <button class="new-outfit-btn" @onclick="StartNewOutfit">
+                <span class="icon">➕</span> New Outfit
+            </button>
+        </div>
+    }
+
+    @if (isEditing)
+    {
+        <div class="outfit-form-section">
+            <h2>@(editingOutfit?.Id > 0 ? "Edit Outfit" : "Create New Outfit")</h2>
+            <EditForm Model="@editingOutfit" OnValidSubmit="SaveOutfit">
+                <DataAnnotationsValidator />
+
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label>Outfit Name</label>
+                        <InputText @bind-Value="editingOutfit.Name" class="form-control" placeholder="e.g., Work Monday Look" />
+                        <ValidationMessage For="@(() => editingOutfit.Name)" />
+                    </div>
+
+                    <div class="form-group">
+                        <label>Tags</label>
+                        <select class="form-control" 
+                                @bind="selectedTag" 
+                                @bind:event="onchange">
+                            <option value="">Select Tag</option>
+                            <option value="Work">Work</option>
+                            <option value="Date">Date</option>
+                            <option value="Casual">Casual</option>
+                            <option value="Gym">Gym</option>
+                            <option value="Party">Party</option>
+                            <option value="Formal">Formal</option>
+                        </select>
+                        <div class="selected-tags">
+                            @foreach (var tag in selectedTags)
+                            {
+                                <span class="tag">
+                                    @tag
+                                    <button type="button" class="remove-tag" @onclick="() => RemoveTag(tag)">×</button>
+                                </span>
+                            }
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Planned Date</label>
+                        <InputDate @bind-Value="editingOutfit.PlannedDate" class="form-control" />
+                        <ValidationMessage For="@(() => editingOutfit.PlannedDate)" />
+                    </div>
+                </div>
+
+                <div class="closet-items-selection">
+                    <h3>Select Items</h3>
+                    <div class="items-grid">
+                        @if (closetItems == null || closetItems.Count == 0)
+                        {
+                            <div style="color: #e60023; font-weight: bold; padding: 20px;">No closet items found. Please add items in Closet Management first.</div>
+                        }
+                        else
+                        {
+                            @foreach (var item in closetItems)
+                            {
+                                var isSelected = selectedItemIds.Contains(item.Id);
+                                <div class="closet-item @(isSelected ? "selected" : "")" 
+                                     @onclick="() => ToggleItemSelection(item.Id)">
+                                    <div class="item-image">
+                                        <img src="@(item.ImagePath.StartsWith("/") ? item.ImagePath : "/" + item.ImagePath)" alt="@item.Type" />
+                                    </div>
+                                    <div class="item-details">
+                                        <h4>@item.Type</h4>
+                                        <p>@item.Color</p>
+                                    </div>
+                                    @if (isSelected)
+                                    {
+                                        <div class="selected-overlay">
+                                            <span class="checkmark">✓</span>
+                                        </div>
+                                    }
+                                </div>
+                            }
+                        }
+                    </div>
+                </div>
+
+                <div class="form-actions">
+                    <button type="submit" class="save-btn">Save Outfit</button>
+                    <button type="button" class="cancel-btn" @onclick="CancelEdit">Cancel</button>
+                </div>
+            </EditForm>
+        </div>
+    }
+    else
+    {
+        <div class="outfits-display-section">
+            <div class="filters">
+                <input type="text" 
+                       class="filter-control" 
+                       placeholder="Search by name or tag..." 
+                       @bind="searchFilter" 
+                       @bind:event="oninput" />
+                
+                <input type="date" 
+                       class="filter-control"
+                       @bind="dateFilter" />
+            </div>
+
+            <div class="outfits-grid">
+                @foreach (var outfit in FilteredOutfits())
+                {
+                    <div class="outfit-card">
+                        <div class="outfit-header">
+                            <h3>@outfit.Name</h3>
+                            <div class="outfit-date">@outfit.PlannedDate.ToString("MMM dd, yyyy")</div>
+                        </div>
+
+                        <div class="outfit-tags">
+                            @foreach (var tag in outfit.Tags.Split(','))
+                            {
+                                <span class="tag">@tag.Trim()</span>
+                            }
+                        </div>
+
+                        <div class="outfit-items">
+                            @foreach (var itemId in outfit.GetItemIdsList())
+                            {
+                                var item = closetItems.FirstOrDefault(i => i.Id == itemId);
+                                if (item != null)
+                                {
+                                    <div class="item-thumbnail">
+                                        <img src="@(item.ImagePath.StartsWith("/") ? item.ImagePath : "/" + item.ImagePath)" alt="@item.Type" />
+                                    </div>
+                                }
+                            }
+                        </div>
+
+                        <div class="outfit-actions">
+                            <button class="edit-btn" @onclick="() => EditOutfit(outfit)">
+                                <span class="icon">✏️</span>
+                            </button>
+                            <button class="delete-btn" @onclick="() => DeleteOutfit(outfit)">
+                                <span class="icon">🗑️</span>
+                            </button>
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    private List<Outfit> outfits = new List<Outfit>();
+    private List<ClosetItem> closetItems = new List<ClosetItem>();
+    private Outfit editingOutfit;
+    private bool isEditing = false;
+    private string selectedTag = "";
+    private HashSet<string> selectedTags = new HashSet<string>();
+    private HashSet<int> selectedItemIds = new HashSet<int>();
+    private string searchFilter = "";
+    private DateTime? dateFilter;
+    private int userId = 1; // TODO: Replace with actual user id from auth
+
+    private OutfitDbHelper outfitDbHelper;
+    private ClosetDbHelper closetDbHelper;
+
+    protected override void OnInitialized()
+    {
+        outfitDbHelper = new OutfitDbHelper(Configuration);
+        closetDbHelper = new ClosetDbHelper(Configuration);
+        LoadData();
+        NavigationManager.LocationChanged += HandleLocationChanged;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            LoadData();
+            await Task.CompletedTask; // Add await to fix CS1998
+            StateHasChanged();
+        }
+    }
+
+    private void HandleLocationChanged(object sender, LocationChangedEventArgs e)
+    {
+        if (e.Location.EndsWith("/outfitplanner", StringComparison.OrdinalIgnoreCase))
+        {
+            LoadData();
+            StateHasChanged();
+        }
+    }
+
+    public void Dispose()
+    {
+        NavigationManager.LocationChanged -= HandleLocationChanged;
+    }
+
+    private void LoadData()
+    {
+        outfits = outfitDbHelper.GetOutfits(userId);
+        closetItems = closetDbHelper.GetItems(userId);
+    }
+
+    private void StartNewOutfit()
+    {
+        editingOutfit = new Outfit
+        {
+            UserId = userId,
+            PlannedDate = DateTime.Today
+        };
+        selectedTags.Clear();
+        selectedItemIds.Clear();
+        isEditing = true;
+    }
+
+    private void EditOutfit(Outfit outfit)
+    {
+        editingOutfit = new Outfit
+        {
+            Id = outfit.Id,
+            UserId = outfit.UserId,
+            Name = outfit.Name,
+            Tags = outfit.Tags,
+            PlannedDate = outfit.PlannedDate,
+            ItemIds = outfit.ItemIds
+        };
+        
+        // Clear and populate selected tags
+        selectedTags.Clear();
+        if (!string.IsNullOrEmpty(outfit.Tags))
+        {
+            foreach (var tag in outfit.Tags.Split(',').Select(t => t.Trim()))
+            {
+                if (!string.IsNullOrEmpty(tag))
+                {
+                    selectedTags.Add(tag);
+                }
+            }
+        }
+
+        // Clear and populate selected items
+        selectedItemIds.Clear();
+        foreach (var itemId in outfit.GetItemIdsList())
+        {
+            selectedItemIds.Add(itemId);
+        }
+        
+        isEditing = true;
+        StateHasChanged();
+    }
+
+    private async Task DeleteOutfit(Outfit outfit)
+    {
+        if (await JSRuntime.InvokeAsync<bool>("confirm", "Are you sure you want to delete this outfit?"))
+        {
+            outfitDbHelper.DeleteOutfit(outfit.Id, userId);
+            LoadData();
+        }
+    }
+
+    private void ToggleItemSelection(int itemId)
+    {
+        if (selectedItemIds.Contains(itemId))
+            selectedItemIds.Remove(itemId);
+        else
+            selectedItemIds.Add(itemId);
+    }
+
+    private void OnTagSelected(ChangeEventArgs e)
+    {
+        selectedTag = e.Value?.ToString() ?? "";
+        AddTag();
+    }
+
+    private void AddTag()
+    {
+        if (!string.IsNullOrWhiteSpace(selectedTag) && !selectedTags.Contains(selectedTag))
+        {
+            selectedTags.Add(selectedTag);
+            selectedTag = "";
+            StateHasChanged();
+        }
+    }
+
+    private void RemoveTag(string tag)
+    {
+        selectedTags.Remove(tag);
+    }
+
+    private async Task SaveOutfit()
+    {
+        if (selectedItemIds.Count == 0)
+        {
+            await JSRuntime.InvokeVoidAsync("alert", "Please select at least one item for the outfit.");
+            return;
+        }
+
+        if (selectedTags.Count == 0)
+        {
+            await JSRuntime.InvokeVoidAsync("alert", "Please add at least one tag for the outfit.");
+            return;
+        }
+
+        editingOutfit.Tags = string.Join(", ", selectedTags);
+        editingOutfit.SetItemIdsList(selectedItemIds.ToList());
+
+        try
+        {
+            if (editingOutfit.Id > 0)
+                outfitDbHelper.UpdateOutfit(editingOutfit);
+            else
+                outfitDbHelper.AddOutfit(editingOutfit);
+
+            LoadData();
+            isEditing = false;
+            await JSRuntime.InvokeVoidAsync("alert", "Outfit saved successfully!");
+        }
+        catch (Exception ex)
+        {
+            await JSRuntime.InvokeVoidAsync("alert", $"Error saving outfit: {ex.Message}");
+        }
+
+        await Task.CompletedTask;
+    }
+
+    private void CancelEdit()
+    {
+        isEditing = false;
+        editingOutfit = null;
+        selectedTags.Clear();
+        selectedItemIds.Clear();
+    }
+
+    private IEnumerable<Outfit> FilteredOutfits()
+    {
+        var filtered = outfits.AsEnumerable();
+
+        if (!string.IsNullOrWhiteSpace(searchFilter))
+        {
+            filtered = filtered.Where(o => 
+                o.Name.Contains(searchFilter, StringComparison.OrdinalIgnoreCase) ||
+                o.Tags.Contains(searchFilter, StringComparison.OrdinalIgnoreCase));
+        }
+
+        if (dateFilter.HasValue)
+        {
+            filtered = filtered.Where(o => o.PlannedDate.Date == dateFilter.Value.Date);
+        }
+
+        return filtered;
+    }
+}

@@ -1,0 +1,366 @@
+/* Background with blurred effect and black shadow overlay */
+.sc-pinterest-bg {
+    min-height: 100vh;
+    width: 100%;
+    position: relative;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-family: 'Poppins', Arial, sans-serif;
+    overflow: hidden;
+    background: url('/bg.png') no-repeat center center fixed;
+    background-size: cover;
+}
+
+    .sc-pinterest-bg::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.5);
+        backdrop-filter: blur(1px);
+        z-index: -2;
+    }
+
+    .sc-pinterest-bg::after {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: linear-gradient(
+            135deg,
+            rgba(255, 112, 67, 0.3),
+            rgba(78, 52, 46, 0.4)
+        );
+        z-index: -1;
+    }
+
+.sc-pinterest-layout {
+    display: flex;
+    flex-direction: row;
+    width: 100%;
+    min-height: 100vh;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    padding: 0 10vw;
+}
+
+.sc-pinterest-left {
+    flex: 1;
+    max-width: 800px;
+    padding: 2rem;
+    color: white;
+    font-size: 3rem;
+    font-weight: 700;
+    text-align: left;
+    z-index: 10;
+    margin-right: 2rem;
+}
+
+/* Gradient text */
+.sc-pinterest-heading {
+    font-size: 4rem;
+    font-weight: 700;
+    line-height: 1.1;
+    color: white;
+    text-shadow: 2px 2px 8px rgba(0, 0, 0, 0.4);
+    background: none;
+    -webkit-text-fill-color: white;
+    max-width: 800px;
+    margin-bottom: 0;
+    letter-spacing: -0.02em;
+}
+
+.sc-login-card {
+    background-color: #ffffff;
+    border-radius: 15px;
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.1);
+    width: 370px;
+    padding: 35px 30px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 20px;
+    border: 1px solid #e0e0e0;
+    margin: auto;
+    z-index: 10;
+}
+
+.sc-logo-circle {
+    background: linear-gradient(45deg, #ff7043, #4e342e);
+    color: #fff;
+    font-size: 2.5rem;
+    font-weight: 700;
+    border-radius: 50%;
+    width: 60px;
+    height: 60px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    letter-spacing: 1px;
+    margin-bottom: 20px;
+}
+
+/* Gradient text */
+.sc-app-title {
+    font-size: 1.6rem;
+    font-weight: 700;
+    background: linear-gradient(45deg, #ff7043, #4e342e);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    text-fill-color: transparent;
+    letter-spacing: 1px;
+    text-align: center;
+    margin-top: 10px;
+}
+
+.sc-form-group {
+    width: 100%;
+    margin-bottom: 20px;
+}
+
+.sc-input {
+    width: 100%;
+    padding: 12px 15px;
+    border-radius: 10px;
+    border: 1px solid #d0d0d0;
+    font-size: 1.1rem;
+    background-color: #f9f9f9;
+    color: #333;
+    outline: none;
+    transition: border-color 0.3s ease-in-out;
+}
+
+    .sc-input:focus {
+        border-color: #ff7043;
+        box-shadow: 0 0 5px rgba(255, 112, 67, 0.5);
+    }
+
+.sc-btn {
+    width: 100%;
+    padding: 12px;
+    border-radius: 10px;
+    font-size: 1.1rem;
+    font-weight: 600;
+    border: none;
+    cursor: pointer;
+    transition: background 0.3s ease;
+}
+
+.sc-btn-login {
+    background: linear-gradient(45deg, #ff7043, #4e342e);
+    color: white;
+    margin-top: 10px;
+}
+
+    .sc-btn-login:hover {
+        background: linear-gradient(45deg, #4e342e, #ff7043);
+    }
+
+.sc-btn-facebook {
+    background: #3b5998;
+    color: white;
+}
+
+    .sc-btn-facebook:hover {
+        background: #4c70a7;
+    }
+
+.sc-btn-google {
+    background: #db4437;
+    color: white;
+}
+
+    .sc-btn-google:hover {
+        background: #c1351d;
+    }
+
+.sc-btn-signup {
+    background: #fff;
+    color: #4e342e;
+    border: 2px solid #4e342e;
+    font-weight: 700;
+    margin-top: 0.3rem;
+    padding: 12px;
+    border-radius: 10px;
+}
+
+    .sc-btn-signup:hover {
+        background: linear-gradient(45deg, #4e342e, #ff7043);
+        color: white;
+        border-color: transparent;
+    }
+
+/* Gradient text */
+.sc-or {
+    font-size: 1.1rem;
+    font-weight: 600;
+    text-align: center;
+    margin: 10px 0;
+    background: linear-gradient(45deg, #ff7043, #4e342e);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    text-fill-color: transparent;
+}
+
+.sc-forgot-link {
+    font-size: 1rem;
+    text-decoration: none;
+    font-weight: 600;
+    transition: color 0.3s;
+    margin-bottom: 15px;
+    background: linear-gradient(45deg, #4e342e, #4e342e);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    text-fill-color: transparent;
+}
+
+    .sc-forgot-link:hover {
+        background: linear-gradient(45deg, #ff7043, #4e342e);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        text-fill-color: transparent;
+    }
+
+.sc-error-message {
+    color: #f357a8;
+    background: #fff0f6;
+    border: 1px solid #f357a8;
+    border-radius: 10px;
+    padding: 1rem;
+    margin-bottom: 1.5rem;
+    text-align: center;
+    font-weight: 600;
+}
+
+@media (max-width: 600px) {
+    .sc-login-card {
+        width: 85%;
+        padding: 25px 15px;
+    }
+
+    .sc-app-title {
+        font-size: 1.4rem;
+    }
+}
+
+@media (max-width: 768px) {
+    .sc-pinterest-heading {
+        font-size: 3rem;
+    }
+}
+
+/* Container for the entire search idea section */
+.search-idea-container {
+    background-color: #fef4a5; /* Light yellow background */
+    padding: 40px;
+    border-radius: 20px;
+    margin-top: 40px;
+    position: relative; /* Required for absolute positioning of images */
+    width: 100%; /* Full width */
+}
+
+/* Flex container for content with image gallery on the left and text on the right */
+.search-idea-content {
+    display: flex;
+    align-items: flex-start; /* Aligns items at the top */
+    justify-content: space-between; /* Space between images and text */
+    width: 100%; /* Ensure full screen width */
+}
+
+/* Left side: Image gallery */
+.image-gallery {
+    position: absolute;
+    top: 20px; /* Adjust top positioning */
+    left: 20px; /* Adjust left positioning */
+    width: 40%; /* Adjust the width for images */
+    height: 80%; /* Keep enough space for the images */
+    z-index: 1; /* Ensure images are above the background */
+}
+
+    /* Each image's style */
+    .image-gallery img {
+        width: 150px; /* Adjust width */
+        height: 150px; /* Adjust height */
+        object-fit: cover; /* Make sure the images maintain their aspect ratio */
+        border-radius: 15px; /* Rounded corners for the images */
+        position: absolute; /* Absolutely position each image */
+    }
+
+    /* Positioning and rotating the images */
+    .image-gallery .image-rounded {
+        top: 0;
+        left: 0;
+        transform: rotate(-10deg); /* Slight rotation */
+    }
+
+    .image-gallery .image-square {
+        top: 60px;
+        left: 40px;
+        transform: rotate(10deg); /* Slight rotation */
+    }
+
+    .image-gallery .image-circle {
+        top: 120px;
+        left: 80px;
+        transform: rotate(-20deg); /* Slight rotation */
+    }
+
+/* Right side: Search box and text */
+.search-box-container {
+    width: 55%; /* Adjust the width for the text */
+    text-align: left; /* Align text to the left */
+    z-index: 2; /* Ensure text is above images */
+}
+
+/* Style for the search box and button */
+.search-box {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+    .search-box input {
+        padding: 12px;
+        border: none;
+        border-radius: 20px;
+        width: 280px;
+        font-size: 16px;
+    }
+
+    .search-box button {
+        padding: 12px 20px;
+        margin-left: 10px;
+        background-color: #9c3f64; /* Darker red */
+        color: white;
+        border: none;
+        border-radius: 20px;
+        font-size: 16px;
+        cursor: pointer;
+    }
+
+        .search-box button:hover {
+            background-color: #7b2b48; /* Darker shade on hover */
+        }
+
+/* Text below the search box */
+.search-text {
+    font-size: 18px;
+    color: #8e2f33; /* Dark red text */
+    font-family: 'Poppins', Arial, sans-serif;
+    line-height: 1.5;
+}
+
+    .search-text strong {
+        color: #9c3f64; /* Red color for the highlighted text */
+    }

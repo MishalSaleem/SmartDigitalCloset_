@@ -1,0 +1,77 @@
+@page "/interests"
+@using System.Linq
+@inject IJSRuntime JSRuntime
+
+<div class="sc-pinterest-bg sc-interests-bg">
+    <div class="sc-interests-container">
+        <h2 class="sc-interests-heading">Pick your interests</h2>
+        <div class="sc-interests-grid">
+            @foreach (var interest in InterestList)
+            {
+                <div class="sc-interest-card @(SelectedInterests.Contains(interest) ? "selected" : "")" @onclick="() => ToggleInterest(interest)" tabindex="0" aria-label="@interest.Label">
+                    <img src="@interest.ImageUrl" alt="@interest.Label" class="sc-interest-img" />
+                    <div class="sc-interest-label">@interest.Label</div>
+                </div>
+            }
+        </div>
+        <button class="sc-btn sc-btn-login sc-pick-btn" disabled="@(SelectedInterests.Count == 0)" @onclick="GoNext">
+            Continue
+        </button>
+    </div>
+</div>
+
+@code {
+    [Inject] NavigationManager Navigation { get; set; } = default!;
+    [Inject] Blazored.SessionStorage.ISessionStorageService SessionStorage { get; set; } = default!;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var email = await SessionStorage.GetItemAsync<string>("userEmail");
+        if (string.IsNullOrEmpty(email))
+        {
+            Navigation.NavigateTo("/login", true);
+        }
+    }
+
+    private List<Interest> InterestList = new()
+    {
+        new Interest("Music", "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?auto=format&fit=crop&w=300&q=80"),
+        new Interest("Baking", "https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&w=300&q=80"),
+        new Interest("Gymnastics", "https://images.unsplash.com/photo-1509228468518-180dd4864904?auto=format&fit=crop&w=300&q=80"),
+        new Interest("Fashion", "https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=300&q=80"),
+        new Interest("Travel", "https://images.unsplash.com/photo-1465101046530-73398c7f28ca?auto=format&fit=crop&w=300&q=80"),
+        new Interest("Art", "https://images.unsplash.com/photo-1503342217505-b0a15ec3261c?auto=format&fit=crop&w=300&q=80"),
+        new Interest("Sports", "https://images.unsplash.com/photo-1519125323398-675f0ddb6308?auto=format&fit=crop&w=300&q=80"),
+        new Interest("Technology", "https://images.unsplash.com/photo-1519389950473-47ba0277781c?auto=format&fit=crop&w=300&q=80"),
+        new Interest("Photography", "https://images.unsplash.com/photo-1465101046530-73398c7f28ca?auto=format&fit=crop&w=300&q=80"),
+        new Interest("Gardening", "https://images.unsplash.com/photo-1464983953574-0892a716854b?auto=format&fit=crop&w=300&q=80"),
+        new Interest("Fitness", "https://images.unsplash.com/photo-1512436991641-6745cdb1723f?auto=format&fit=crop&w=300&q=80"),
+        new Interest("Movies", "https://images.unsplash.com/photo-1465101046530-73398c7f28ca?auto=format&fit=crop&w=300&q=80"),
+        new Interest("Reading", "https://images.unsplash.com/photo-1503342217505-b0a15ec3261c?auto=format&fit=crop&w=300&q=80"),
+        new Interest("Cooking", "https://images.unsplash.com/photo-1519125323398-675f0ddb6308?auto=format&fit=crop&w=300&q=80"),
+        new Interest("DIY", "https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=300&q=80"),
+    };
+    private HashSet<Interest> SelectedInterests = new();    private void ToggleInterest(Interest interest)
+    {
+        if (SelectedInterests.Contains(interest))
+            SelectedInterests.Remove(interest);
+        else
+            SelectedInterests.Add(interest);
+    }
+    private void GoNext()
+    {
+        // Simply navigate to the page based on interests
+        if (SelectedInterests.Count == 1)
+        {
+            var interest = SelectedInterests.First().Label.ToLower();
+            Navigation.NavigateTo($"/{interest}");
+        }
+        // For multiple interests, just go to the home page
+        else if (SelectedInterests.Count > 1)
+        {
+            Navigation.NavigateTo("/");
+        }
+    }
+    
+    public record Interest(string Label, string ImageUrl);
+}

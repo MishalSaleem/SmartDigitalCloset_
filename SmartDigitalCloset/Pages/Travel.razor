@@ -1,0 +1,147 @@
+@page "/travel"
+@using Microsoft.AspNetCore.Components
+@using System
+@inject NavigationManager Navigation
+@inject Blazored.SessionStorage.ISessionStorageService SessionStorage
+@inject SmartDigitalCloset.Data.FavoritesService FavoritesService
+@inject SmartDigitalCloset.Data.InterestService InterestService
+
+<!-- Profile Button -->
+<button class="profile-button" @onclick='() => Navigation.NavigateTo("/profile")' title="Profile">
+    👤
+</button>
+
+<div class="music-gradient-bg">
+    <main class="music-inspiration-main">        <h2 class="music-inspiration-title">Travel Inspiration Gallery</h2>
+        
+        <div style="text-align: center; margin: 15px auto; max-width: 600px;">
+            <input type="text" @bind="searchQuery" @bind:event="oninput" 
+                   placeholder="Search travel destinations..." 
+                   style="width: 100%; padding: 8px 12px; border-radius: 20px; border: 1px solid #ddd; font-size: 16px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);" />
+        </div>
+        
+        <div class="music-cars-gallery">
+            @foreach (var travel in FilteredTravelImages.Take(itemsToShow))
+            {
+                <div class="car-card" style="position:relative;">
+                    <img src="@travel.Url" alt="Travel image" loading="lazy" class="artist-img" />
+                    <div class="car-label">@travel.Name</div>
+                    <button @onclick="() => SaveFavorite(travel)" style="position:absolute;top:8px;right:8px;background:none;border:none;cursor:pointer;">
+                        <span style="font-size:1.3rem;color:@(IsFavorite(travel) ? "#e60023" : "#bbb");">&#10084;</span>
+                    </button>
+                </div>
+            }
+        </div>        @if (itemsToShow < FilteredTravelImages.Count)
+        {
+            <button class="sc-btn-loadmore" @onclick="LoadMore">Load More</button>
+        }
+        <button class="save-interest-btn" @onclick="ToggleInterest" style="background: linear-gradient(135deg, #5D4037 0%, #E64A19 100%);">@(_isSaved ? "Remove from Saved Interests" : "Save Interest")</button>
+    </main>
+</div>
+
+@code {
+    private HashSet<string> favoriteNames = new();
+    private string searchQuery = "";
+    private bool _isSaved;
+    private int itemsToShow = 6;
+    
+    private List<(string Url, string Name)> FilteredTravelImages => string.IsNullOrWhiteSpace(searchQuery)
+        ? TravelImages
+        : TravelImages.Where(item => item.Name.Contains(searchQuery, StringComparison.OrdinalIgnoreCase)).ToList();
+    
+    protected override async Task OnInitializedAsync()
+    {
+        var email = await SessionStorage.GetItemAsync<string>("userEmail");
+        if (string.IsNullOrEmpty(email))
+        {
+            Navigation.NavigateTo("/login", true);
+        }
+        else
+        {
+            var favs = await FavoritesService.GetFavoritesAsync(email);
+            favoriteNames = favs.Where(f => f.ItemType == "Travel").Select(f => f.ItemName).ToHashSet();
+            
+            // Check if interest is already saved
+            _isSaved = await InterestService.HasInterestAsync(email, "Travel");
+        }
+    }
+    
+    private async Task SaveFavorite((string Url, string Name) travel)
+    {
+        try
+        {
+            var email = await SessionStorage.GetItemAsync<string>("userEmail");
+            if (string.IsNullOrEmpty(email)) return;
+            
+            if (favoriteNames.Contains(travel.Name))
+            {
+                // Remove from favorites
+                await FavoritesService.RemoveFavoriteAsync(email, travel.Name);
+                favoriteNames.Remove(travel.Name);
+            }
+            else
+            {
+                // Add to favorites
+                await FavoritesService.AddFavoriteAsync(new SmartDigitalCloset.Data.FavoriteItem
+                {
+                    UserEmail = email,
+                    ItemType = "Travel",
+                    ItemName = travel.Name,
+                    ItemImageUrl = travel.Url
+                });
+                favoriteNames.Add(travel.Name);
+            }
+            StateHasChanged();
+        }
+        catch (Exception)
+        {
+            // Silently ignore exceptions to prevent UI crashes
+            // In a production app, we would log this exception
+        }
+    }
+      
+    private bool IsFavorite((string Url, string Name) travel) => favoriteNames.Contains(travel.Name);
+    
+    private async Task ToggleInterest()
+    {
+        var email = await SessionStorage.GetItemAsync<string>("userEmail");
+        if (string.IsNullOrEmpty(email))
+            return;
+            
+        _isSaved = !_isSaved;
+        
+        if (_isSaved)
+        {
+            await InterestService.SaveInterestAsync(email, "Travel");
+        }
+        else
+        {
+            await InterestService.RemoveInterestAsync(email, "Travel");
+        }
+        
+        StateHasChanged();
+    }
+
+    private void LoadMore() => itemsToShow = Math.Min(itemsToShow + 6, FilteredTravelImages.Count);
+
+    private List<(string Url, string Name)> TravelImages = new()
+    {
+        ("https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcT4hv5ZAe_duOKO12ChyuzhcAddFoJCJl9o1g&s", "Santorini, Greece"),
+        ("https://www.planetware.com/wpimages/2019/11/canada-in-pictures-beautiful-places-to-photograph-morraine-lake.jpg", "Banff, Canada"),
+        ("https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQRoxridbYEXVA_34zVqKtMWJL77C9GbVsnaQ&s", "Kyoto, Japan"),
+        ("https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTzR2ogbyQnybpZiTj8JbUNuo-Wy2uM_I86Kg&s", "Paris, France"),
+        ("https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTJBnVtbpRc7UGZZRDdyUdYg7OUbdreTVuXtA&s", "Rome, Italy"),
+        ("https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRDfHgkcrnVCKP43PdL2syQ_CQ_uCJTGVbNjg&s", "Bali, Indonesia"),
+        ("https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcR8bk4QSi76JQmDa3jAm-pX92eVnVB_qpHPkQ&s", "New York, USA"),
+        ("https://www.zirvelegal.com/wp-content/uploads/2024/03/The-Dubai-Marina-District.webp", "Dubai, UAE"),
+        ("https://www.downunderendeavours.com/wp-content/uploads/2019/05/sydney-things-to-do-800x500-Sydney-Opera-House-8.jpg", "Sydney, Australia"),
+        ("https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRecA5Cc0FsJnRwKn0hFsFYRgK0QE-jHyL4sw&s", "Cape Town, South Africa"),
+        ("https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRfNrmHsXpOqQ_3M-NrEP78VMJUxDtI7zsZrA&s", "Rio de Janeiro, Brazil"),
+        ("https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRNt-l6kAaCOvTmkL6AVR7ylem_-uSg59KEiQ&s", "Venice, Italy"),
+        ("https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSK8gd2Xr5fKNdeKoCcBnPrBdbolG8sQ3pLoDg8d4AmiM3WNKXOaTPv30QfS1_vT91ZDsI&usqp=CAU", "Santorini, Greece"),
+        ("https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTAAC68jyrR-qtNPiTxxjTJavjOFi9qh1y88A&s", "New York, USA"),
+        ("https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTJC18VA0LTvvC3ktE878j7IlVDZNFOodOERg&s", "Islamabad, Pakistan"),
+        ("https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQrhEINsvWXBPRpxk79PEIubNs81fLbXkubBQ&s", "Kabul, Afghanistan"),
+        ("https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcT4pWnJkzmTwvnh623oP_NZjU-9rUHdBTkjPw&s", "Zurich, Switzerlands")
+    };
+}

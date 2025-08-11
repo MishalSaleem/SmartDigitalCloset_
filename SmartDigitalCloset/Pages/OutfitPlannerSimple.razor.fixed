@@ -1,0 +1,330 @@
+@page "/outfitplannersimple"
+@using SmartDigitalCloset.Data
+@inject IConfiguration Configuration
+@inject IJSRuntime JSRuntime
+@inject Blazored.SessionStorage.ISessionStorageService SessionStorage
+@inject NavigationManager NavigationManager
+@inject SmartDigitalCloset.Data.ClosetService ClosetService
+@inject SmartDigitalCloset.Data.OutfitService OutfitService
+@inject IWebHostEnvironment Env
+
+<div class="outfit-planner-container">
+    <h1 class="page-title">Outfit Planner</h1>
+
+    <div class="content-container">
+        <!-- Create Outfit Section -->
+        <div class="create-outfit-section">
+            <h2>Create New Outfit</h2>
+            <div class="form-group">
+                <label>Outfit Name</label>
+                <input type="text" class="form-control" @bind="outfitName" placeholder="e.g., Work Monday Look" />
+            </div>
+
+            <div class="form-group">
+                <label>Occasion</label>
+                <select class="form-control" @bind="selectedTag">
+                    <option value="">Select Occasion</option>
+                    <option value="Work">Work</option>
+                    <option value="Date">Date</option>
+                    <option value="Casual">Casual</option>
+                    <option value="Gym">Gym</option>
+                    <option value="Party">Party</option>
+                    <option value="Formal">Formal</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label>When to Wear</label>
+                <input type="date" class="form-control" @bind="plannedDate" />
+            </div>
+
+            <div class="items-section">
+                <h3>Select Items</h3>
+                <div class="items-grid">
+                    @foreach (var item in closetItems)
+                    {
+                        <div class="item-card @(selectedItems.Contains(item.Id) ? "selected" : "")"
+                             @onclick="() => ToggleItemSelection(item.Id)">
+                            <img src="@(item.ImagePath.StartsWith("/") ? item.ImagePath : "/" + item.ImagePath)" alt="@item.Type" />
+                            <div class="item-info">
+                                <span class="item-type">@item.Type</span>
+                                <span class="item-color">@item.Color</span>
+                            </div>
+                            @if (selectedItems.Contains(item.Id))
+                            {
+                                <div class="selected-mark">✓</div>
+                            }
+                        </div>
+                    }
+                </div>
+            </div>
+            
+            <div class="action-buttons">
+                <button class="save-button" @onclick="SaveOutfit">Save Outfit</button>
+                <button class="clear-button" @onclick="ClearFormAndRefresh">Clear</button>
+            </div>
+        </div>
+
+        <!-- Display Outfits Section -->
+        <div class="outfits-section">
+            <h2>My Outfits</h2>
+            <div class="filters">
+                <input type="text" 
+                       placeholder="Search outfits..." 
+                       @bind="searchTerm" 
+                       @bind:event="oninput" 
+                       class="search-input" />
+                <input type="date" 
+                       @bind="filterDate" 
+                       class="date-filter" />
+            </div>
+
+            <div class="outfits-grid">
+                @foreach (var outfit in FilteredOutfits())
+                {
+                    <div class="outfit-card">
+                        <div class="outfit-header">
+                            <h3>@outfit.Name</h3>
+                            <span class="date">@outfit.PlannedDate.ToString("MMM dd, yyyy")</span>
+                        </div>
+                        <div class="outfit-tag">@outfit.Tags</div>
+                        <div class="outfit-items">
+                            @foreach (var itemId in outfit.GetItemIdsList())
+                            {
+                                var item = closetItems.FirstOrDefault(i => i.Id == itemId);
+                                if (item != null)
+                                {
+                                    <img src="@(item.ImagePath.StartsWith("/") ? item.ImagePath : "/" + item.ImagePath)" alt="@item.Type" />
+                                }
+                            }
+                        </div>
+                        <div class="outfit-actions">
+                            <button class="edit-btn" @onclick="() => EditOutfit(outfit)">Edit</button>
+                            <button class="delete-btn" @onclick="() => DeleteOutfit(outfit.Id)">Delete</button>
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private List<ClosetItem> closetItems = new List<ClosetItem>();
+    private List<Outfit> outfits = new List<Outfit>();
+    private HashSet<int> selectedItems = new HashSet<int>();
+    private string outfitName = "";
+    private string selectedTag = "";
+    private DateTime plannedDate = DateTime.Today;
+    private string searchTerm = "";
+    private DateTime? filterDate;
+    private int? currentEditingOutfitId = null; // Track which outfit is being edited
+    
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadItemsAsync();
+        await LoadOutfitsAsync();
+        StateHasChanged(); // Force UI update
+    }
+
+    private async Task LoadItemsAsync()
+    {
+        closetItems = await ClosetService.LoadItemsAsync();
+    }
+    
+    private async Task LoadOutfitsAsync()
+    {
+        try 
+        {
+            outfits = await OutfitService.LoadOutfitsAsync();
+            // Check for null or empty outfits list
+            if (outfits == null)
+            {
+                outfits = new List<Outfit>();
+            }
+            Console.WriteLine($"Loaded {outfits.Count} outfits");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading outfits: {ex.Message}");
+            outfits = new List<Outfit>();
+            await JSRuntime.InvokeVoidAsync("console.error", $"Failed to load outfits: {ex.Message}");
+        }
+        StateHasChanged(); // Ensure UI is updated
+    }
+    
+    private void ToggleItemSelection(int itemId)
+    {
+        if (selectedItems.Contains(itemId))
+            selectedItems.Remove(itemId);
+        else
+            selectedItems.Add(itemId);
+        
+        InvokeAsync(() => StateHasChanged());
+    }
+    
+    private async Task SaveOutfit()
+    {
+        if (string.IsNullOrWhiteSpace(outfitName))
+        {
+            await JSRuntime.InvokeVoidAsync("alert", "Please enter an outfit name.");
+            return;
+        }
+
+        if (selectedItems.Count == 0)
+        {
+            await JSRuntime.InvokeVoidAsync("alert", "Please select at least one item.");
+            return;
+        }
+
+        try
+        {
+            var outfit = new Outfit
+            {
+                Name = outfitName,
+                Tags = selectedTag,
+                PlannedDate = plannedDate,
+                CreatedAt = DateTime.Now
+            };            
+            
+            // If we're editing an existing outfit, set its ID
+            if (currentEditingOutfitId.HasValue && currentEditingOutfitId > 0)
+            {
+                outfit.Id = currentEditingOutfitId.Value;
+                // Find the original outfit to preserve creation date
+                var originalOutfit = outfits.FirstOrDefault(o => o.Id == currentEditingOutfitId.Value);
+                if (originalOutfit != null)
+                {
+                    outfit.CreatedAt = originalOutfit.CreatedAt;
+                }
+            }
+            
+            outfit.SetItemIdsList(selectedItems.ToList());
+
+            // Save to database and JSON using OutfitService
+            await OutfitService.SaveOutfitAsync(outfit);
+            
+            // Reload outfits to get the updated list with IDs from database
+            await LoadOutfitsAsync();
+            await ClearFormAndRefresh();
+            
+            string message = currentEditingOutfitId.HasValue ? "Outfit updated successfully!" : "Outfit saved successfully!";
+            currentEditingOutfitId = null; // Reset editing state
+            await JSRuntime.InvokeVoidAsync("alert", message);
+        }
+        catch (Exception ex)
+        {
+            await JSRuntime.InvokeVoidAsync("alert", $"Error saving outfit: {ex.Message}");
+            Console.WriteLine($"Error saving outfit: {ex.Message}");
+        }
+    }
+    
+    private async Task ClearForm()
+    {
+        outfitName = "";
+        selectedTag = "";
+        plannedDate = DateTime.Today;
+        selectedItems = new HashSet<int>();
+        await InvokeAsync(StateHasChanged);
+    }
+    
+    private async Task ClearFormAndRefresh()
+    {
+        outfitName = "";
+        selectedTag = "";
+        plannedDate = DateTime.Today;
+        selectedItems = new HashSet<int>();
+        currentEditingOutfitId = null; // Reset editing state
+        
+        // Force immediate UI refresh with JavaScript interop
+        await JSRuntime.InvokeVoidAsync("eval", @"
+            document.querySelectorAll('.item-card.selected').forEach(card => {
+                card.classList.remove('selected');
+            });
+            document.querySelectorAll('.selected-mark').forEach(mark => {
+                mark.style.display = 'none';
+            });
+        ");
+        
+        StateHasChanged();
+    }
+    
+    private async Task DeleteOutfit(int outfitId)
+    {
+        if (await JSRuntime.InvokeAsync<bool>("confirm", "Are you sure you want to delete this outfit?"))
+        {
+            try
+            {
+                // Delete from database and JSON using OutfitService
+                await OutfitService.DeleteOutfitAsync(outfitId);
+                
+                // Reload outfits to ensure UI is consistent with database
+                await LoadOutfitsAsync();
+                
+                // Also update the local list
+                outfits = outfits.Where(o => o.Id != outfitId).ToList();
+                StateHasChanged();
+                await JSRuntime.InvokeVoidAsync("alert", "Outfit deleted successfully!");
+            }
+            catch (Exception ex)
+            {
+                await JSRuntime.InvokeVoidAsync("alert", $"Error deleting outfit: {ex.Message}");
+                Console.WriteLine($"Error deleting outfit: {ex.Message}");
+            }
+        }
+    }
+    
+    private async Task EditOutfit(Outfit outfit)
+    {
+        // Store the outfit ID so we can update it later
+        currentEditingOutfitId = outfit.Id;
+        
+        outfitName = outfit.Name;
+        selectedTag = outfit.Tags;
+        plannedDate = outfit.PlannedDate;
+        selectedItems = new HashSet<int>(outfit.GetItemIdsList());
+        
+        // Scroll to the form for a better user experience
+        await JSRuntime.InvokeVoidAsync("scrollToElement", ".create-outfit-section");
+    }
+
+    private IEnumerable<Outfit> FilteredOutfits()
+    {
+        var filtered = outfits.AsEnumerable();
+
+        if (!string.IsNullOrWhiteSpace(searchTerm))
+        {
+            filtered = filtered.Where(o => 
+                o.Name.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ||
+                o.Tags.Contains(searchTerm, StringComparison.OrdinalIgnoreCase));
+        }
+
+        if (filterDate.HasValue)
+        {
+            filtered = filtered.Where(o => o.PlannedDate.Date == filterDate.Value.Date);
+        }
+
+        return filtered;
+    }
+    
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await JSRuntime.InvokeVoidAsync("eval", @"
+                window.scrollToElement = function (selector) {
+                    const element = document.querySelector(selector);
+                    if (element) {
+                        element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    }
+                };
+            ");
+            
+            // Double-check that outfits are loaded
+            if (outfits == null || outfits.Count == 0)
+            {
+                await LoadOutfitsAsync();
+            }
+        }
+    }
+}

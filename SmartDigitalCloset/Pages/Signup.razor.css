@@ -1,0 +1,394 @@
+﻿.signup-container {
+    min-height: 100vh;
+    width: 100vw;
+    background: linear-gradient(135deg, #7b2ff2 0%, #f357a8 50%, #43e97b 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Poppins', Arial, sans-serif;
+}
+
+.signup-card {
+    background: rgba(255,255,255,0.97);
+    border-radius: 1.5rem;
+    box-shadow: 0 8px 32px rgba(44, 0, 80, 0.15);
+    padding: 2.5rem 2.2rem 2rem 2.2rem;
+    max-width: 370px;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    animation: fadeIn 0.8s cubic-bezier(.4,0,.2,1);
+}
+
+.smartcloset-logo {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin-bottom: 0.7rem;
+}
+.logo-circle {
+    background: linear-gradient(135deg, #f357a8 0%, #7b2ff2 100%);
+    color: #fff;
+    font-size: 2.3rem;
+    font-weight: 700;
+    border-radius: 50%;
+    width: 64px;
+    height: 64px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 16px rgba(123,47,242,0.13);
+    letter-spacing: 1px;
+    border: 3px solid #fff;
+    transition: box-shadow 0.2s, transform 0.2s;
+}
+.logo-circle:hover {
+    box-shadow: 0 8px 32px rgba(243,87,168,0.18);
+    transform: scale(1.05);
+}
+
+.logo-title {
+    font-size: 2.1rem;
+    font-weight: 600;
+    color: #7b2ff2;
+    margin-bottom: 0.7rem;
+    letter-spacing: 1px;
+    text-shadow: 0 2px 8px rgba(123,47,242,0.08);
+}
+
+h2 {
+    font-size: 1.5rem;
+    font-weight: 600;
+    margin-bottom: 0.2rem;
+    color: #2d1457;
+}
+
+.subheading {
+    color: #7b2ff2;
+    font-size: 1rem;
+    margin-bottom: 1.2rem;
+    font-weight: 500;
+}
+
+.form-group {
+    width: 100%;
+    margin-bottom: 1.1rem;
+}
+
+.form-group label {
+    font-size: 0.98rem;
+    color: #2d1457;
+    margin-bottom: 0.2rem;
+    font-weight: 500;
+}
+
+.form-control {
+    width: 100%;
+    padding: 0.7rem 1rem;
+    border-radius: 0.7rem;
+    border: 1.5px solid #e0d7f3;
+    font-size: 1rem;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    background: #faf8ff;
+    color: #2d1457;
+    outline: none;
+    margin-top: 0.1rem;
+}
+.form-control:focus {
+    border-color: #7b2ff2;
+    box-shadow: 0 0 0 2px #e6d6fa;
+}
+
+.btn-signup {
+    width: 100%;
+    padding: 0.8rem 0;
+    background: linear-gradient(90deg, #7b2ff2 0%, #f357a8 100%);
+    color: #fff;
+    font-size: 1.1rem;
+    font-weight: 600;
+    border: none;
+    border-radius: 0.7rem;
+    margin-top: 0.5rem;
+    margin-bottom: 0.2rem;
+    box-shadow: 0 2px 8px rgba(123,47,242,0.10);
+    cursor: pointer;
+    transition: background 0.2s, transform 0.15s, box-shadow 0.2s;
+}
+.btn-signup:hover, .btn-signup:focus {
+    background: linear-gradient(90deg, #f357a8 0%, #7b2ff2 100%);
+    transform: translateY(-2px) scale(1.03);
+    box-shadow: 0 4px 16px rgba(243,87,168,0.13);
+}
+
+.login-link {
+    margin-top: 1.1rem;
+    font-size: 0.98rem;
+    color: #2d1457;
+    text-align: center;
+}
+.login-link a {
+    color: #7b2ff2;
+    font-weight: 600;
+    text-decoration: none;
+    transition: color 0.2s;
+}
+.login-link a:hover {
+    color: #f357a8;
+    text-decoration: underline;
+}
+
+@media (max-width: 600px) {
+    .signup-card {
+        padding: 1.2rem 0.7rem 1.2rem 0.7rem;
+        max-width: 98vw;
+    }
+    .logo-title {
+        font-size: 1.5rem;
+    }
+}
+
+/* Pinterest-style SmartCloset Sign-Up Modal */
+.sc-pinterest-bg {
+    min-height: 100vh;
+    width: 100%;
+    position: relative;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-family: 'Poppins', Arial, sans-serif;
+    overflow: hidden;
+    background: url('/bg.png') no-repeat center center fixed;
+    background-size: cover;
+}
+
+    .sc-pinterest-bg::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.3);
+        backdrop-filter: blur(1px);
+        z-index: -2;
+    }
+
+    .sc-pinterest-bg::after {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: linear-gradient(
+            135deg,
+            rgba(255, 112, 67, 0.4),
+            rgba(78, 52, 46, 0.6)
+        );
+        z-index: -1;
+    }
+
+.sc-pinterest-layout {
+    display: flex;
+    flex-direction: row;
+    width: 100%;
+    min-height: 100vh;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    padding: 0 10vw;
+}
+
+.sc-pinterest-left {
+    flex: 1;
+    max-width: 800px;
+    padding: 2rem;
+    color: white;
+    font-size: 3rem;
+    font-weight: 700;
+    text-align: left;
+    z-index: 10;
+    margin-right: 2rem;
+}
+
+.sc-pinterest-heading {
+    font-size: 4rem;
+    font-weight: 700;
+    line-height: 1.1;
+    color: white;
+    text-shadow: 2px 2px 8px rgba(0, 0, 0, 0.4);
+    background: none;
+    -webkit-text-fill-color: white;
+    max-width: 800px;
+    margin-bottom: 0;
+    letter-spacing: -0.02em;
+}
+
+.sc-signup-card {
+    background-color: #ffffff;
+    border-radius: 15px;
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.1);
+    width: 370px;
+    padding: 35px 30px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 20px;
+    border: 1px solid #e0e0e0;
+    margin: auto;
+    z-index: 10;
+}
+
+.sc-logo-circle {
+    background: linear-gradient(45deg, #ff7043, #4e342e);
+    color: #fff;
+    font-size: 2.5rem;
+    font-weight: 700;
+    border-radius: 50%;
+    width: 60px;
+    height: 60px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    letter-spacing: 1px;
+    margin-bottom: 20px;
+}
+
+.sc-app-title {
+    font-size: 1.6rem;
+    font-weight: 700;
+    background: linear-gradient(45deg, #ff7043, #4e342e);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    text-fill-color: transparent;
+    letter-spacing: 1px;
+    text-align: center;
+    margin-top: 10px;
+}
+
+.sc-form-group {
+    width: 100%;
+    margin-bottom: 15px;
+}
+
+.sc-input {
+    width: 100%;
+    padding: 12px 15px;
+    border-radius: 10px;
+    border: 1px solid #d0d0d0;
+    font-size: 1.1rem;
+    background-color: #f9f9f9;
+    color: #333;
+    outline: none;
+    transition: border-color 0.3s ease-in-out;
+}
+
+    .sc-input:focus {
+        border-color: #ff7043;
+        box-shadow: 0 0 5px rgba(255, 112, 67, 0.5);
+    }
+
+.sc-btn {
+    width: 100%;
+    padding: 12px;
+    border-radius: 10px;
+    font-size: 1.1rem;
+    font-weight: 600;
+    border: none;
+    cursor: pointer;
+    transition: background 0.3s ease;
+}
+
+.sc-btn-signup {
+    background: linear-gradient(45deg, #ff7043, #4e342e);
+    color: white;
+    margin-top: 10px;
+}
+
+    .sc-btn-signup:hover {
+        background: linear-gradient(45deg, #4e342e, #ff7043);
+    }
+
+.sc-btn-facebook {
+    background: #3b5998;
+    color: white;
+}
+
+    .sc-btn-facebook:hover {
+        background: #4c70a7;
+    }
+
+.sc-btn-google {
+    background: #db4437;
+    color: white;
+}
+
+    .sc-btn-google:hover {
+        background: #c1351d;
+    }
+
+.sc-or {
+    font-size: 1.1rem;
+    font-weight: 600;
+    text-align: center;
+    margin: 10px 0;
+    background: linear-gradient(45deg, #ff7043, #4e342e);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    text-fill-color: transparent;
+}
+
+.sc-error-message {
+    color: #f357a8;
+    background: #fff0f6;
+    border: 1px solid #f357a8;
+    border-radius: 10px;
+    padding: 1rem;
+    margin-bottom: 1.5rem;
+    text-align: center;
+    font-weight: 600;
+}
+
+.sc-date-input {
+    width: 100%;
+    padding: 12px 15px;
+    border-radius: 10px;
+    border: 1px solid #d0d0d0;
+    font-size: 1.1rem;
+    background-color: #f9f9f9;
+    color: #333;
+    outline: none;
+    transition: border-color 0.3s ease-in-out;
+    font-family: 'Poppins', Arial, sans-serif;
+}
+
+    .sc-date-input:focus {
+        border-color: #ff7043;
+        box-shadow: 0 0 5px rgba(255, 112, 67, 0.5);
+    }
+
+.sc-input-label {
+    display: block;
+    font-size: 1rem;
+    color: #4e342e;
+    margin-bottom: 8px;
+    font-weight: 500;
+}
+
+@media (max-width: 768px) {
+    .sc-signup-card {
+        width: 85%;
+        padding: 25px 15px;
+    }
+
+    .sc-app-title {
+        font-size: 1.4rem;
+    }
+
+    .sc-pinterest-heading {
+        font-size: 3rem;
+    }
+}

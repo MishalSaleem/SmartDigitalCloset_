@@ -1,0 +1,27 @@
+﻿@page "/counter"
+
+<PageTitle>Counter</PageTitle>
+
+<h1>Counter</h1>
+
+<p role="status">Current count: @currentCount</p>
+
+<button class="btn btn-primary" @onclick="IncrementCount">Click me</button>
+
+@code {
+    [Inject] NavigationManager Navigation { get; set; } = default!;
+    [Inject] Blazored.SessionStorage.ISessionStorageService SessionStorage { get; set; } = default!;
+    private int currentCount = 0;
+    private void IncrementCount()
+    {
+        currentCount++;
+    }
+    protected override async Task OnInitializedAsync()
+    {
+        var email = await SessionStorage.GetItemAsync<string>("userEmail");
+        if (string.IsNullOrEmpty(email))
+        {
+            Navigation.NavigateTo("/login", true);
+        }
+    }
+}

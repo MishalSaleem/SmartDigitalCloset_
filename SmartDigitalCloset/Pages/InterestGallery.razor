@@ -1,0 +1,13 @@
+@* Shared gallery for interest images *@
+<div class="travel-cards-gallery">
+    @foreach (var url in ImageUrls)
+    {
+        <div class="travel-card">
+            <img src="@url" alt="Travel image" />
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter] public List<string> ImageUrls { get; set; } = new();
+}

@@ -1,0 +1,12 @@
+@inject NavigationManager NavigationManager
+
+<button class="outfit-planner-button" @onclick="NavigateToOutfitPlanner" title="Outfit Planner">
+    👔
+</button>
+
+@code {
+    private void NavigateToOutfitPlanner()
+    {
+        NavigationManager.NavigateTo("/outfitplannersimple");
+    }
+} 

@@ -1,0 +1,145 @@
+@page "/technology"
+@using Microsoft.AspNetCore.Components
+@using System
+@inject NavigationManager Navigation
+@inject Blazored.SessionStorage.ISessionStorageService SessionStorage
+@inject SmartDigitalCloset.Data.FavoritesService FavoritesService
+@inject SmartDigitalCloset.Data.InterestService InterestService
+
+<!-- Profile Button -->
+<button class="profile-button" @onclick='() => Navigation.NavigateTo("/profile")' title="Profile">
+    👤
+</button>
+
+<div class="music-gradient-bg">
+    <main class="music-inspiration-main">        <h2 class="music-inspiration-title">Technology Inspiration Gallery</h2>
+        
+        <div style="text-align: center; margin: 15px auto; max-width: 600px;">
+            <input type="text" @bind="searchQuery" @bind:event="oninput" 
+                   placeholder="Search technology items..." 
+                   style="width: 100%; padding: 8px 12px; border-radius: 20px; border: 1px solid #ddd; font-size: 16px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);" />
+        </div>
+        
+        <div class="music-cars-gallery">
+            @foreach (var tech in FilteredTechItems.Take(itemsToShow))
+            {
+                <div class="car-card" style="position:relative;">
+                    <img src="@tech.Url" alt="@tech.Name" loading="lazy" class="artist-img" />
+                    <div class="car-label">@tech.Name</div>
+                    <button @onclick="() => SaveFavorite(tech)" style="position:absolute;top:8px;right:8px;background:none;border:none;cursor:pointer;">
+                        <span style="font-size:1.3rem;color:@(IsFavorite(tech) ? "#e60023" : "#bbb");">&#10084;</span>
+                    </button>
+                </div>
+            }
+        </div>        @if (itemsToShow < FilteredTechItems.Count)
+        {
+            <button class="sc-btn-loadmore" @onclick="LoadMore">Load More</button>
+        }
+        <button class="save-interest-btn" @onclick="ToggleInterest" style="background: linear-gradient(135deg, #5D4037 0%, #E64A19 100%);">@(_isSaved ? "Remove from Saved Interests" : "Save Interest")</button>
+    </main>
+</div>
+
+@code {
+    private HashSet<string> favoriteNames = new();
+    private string searchQuery = "";
+    private bool _isSaved;
+    private int itemsToShow = 6;
+    
+    private List<(string Url, string Name)> FilteredTechItems => string.IsNullOrWhiteSpace(searchQuery)
+        ? TechItems
+        : TechItems.Where(tech => tech.Name.Contains(searchQuery, StringComparison.OrdinalIgnoreCase)).ToList();
+    
+    protected override async Task OnInitializedAsync()
+    {
+        var email = await SessionStorage.GetItemAsync<string>("userEmail");
+        if (string.IsNullOrEmpty(email))
+        {
+            Navigation.NavigateTo("/login", true);
+        }
+        else
+        {
+            var favs = await FavoritesService.GetFavoritesAsync(email);
+            favoriteNames = favs.Where(f => f.ItemType == "Technology").Select(f => f.ItemName).ToHashSet();
+            
+            // Check if interest is already saved
+            _isSaved = await InterestService.HasInterestAsync(email, "Technology");
+        }
+    }
+
+    private async Task SaveFavorite((string Url, string Name) tech)
+    {
+        try
+        {
+            var email = await SessionStorage.GetItemAsync<string>("userEmail");
+            if (string.IsNullOrEmpty(email)) return;
+            
+            if (favoriteNames.Contains(tech.Name))
+            {
+                // Remove from favorites
+                await FavoritesService.RemoveFavoriteAsync(email, tech.Name);
+                favoriteNames.Remove(tech.Name);
+            }
+            else
+            {
+                // Add to favorites
+                await FavoritesService.AddFavoriteAsync(new SmartDigitalCloset.Data.FavoriteItem
+                {
+                    UserEmail = email,
+                    ItemType = "Technology",
+                    ItemName = tech.Name,
+                    ItemImageUrl = tech.Url
+                });
+                favoriteNames.Add(tech.Name);
+            }
+            StateHasChanged();
+        }
+        catch (Exception)
+        {
+            // Silently ignore exceptions to prevent UI crashes
+            // In a production app, we would log this exception
+        }
+    }
+    
+    private bool IsFavorite((string Url, string Name) tech) => favoriteNames.Contains(tech.Name);
+    
+    private async Task ToggleInterest()
+    {
+        var email = await SessionStorage.GetItemAsync<string>("userEmail");
+        if (string.IsNullOrEmpty(email))
+            return;
+            
+        _isSaved = !_isSaved;
+        
+        if (_isSaved)
+        {
+            await InterestService.SaveInterestAsync(email, "Technology");
+        }
+        else
+        {
+            await InterestService.RemoveInterestAsync(email, "Technology");
+        }
+        
+        StateHasChanged();
+    }
+
+    private void LoadMore() => itemsToShow = Math.Min(itemsToShow + 6, FilteredTechItems.Count);
+
+    private List<(string Url, string Name)> TechItems = new()
+    {
+        ("https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSJ6EESTdhgqz_OW5KrZWcHABkXcMb-OGg1Ow&s", "AI Robotics"),
+        ("https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQ8bcqVb6rMXGovYWUGzZX68eAEnnCdhOarvA&s", "Quantum Computing"),
+        ("https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQR7Ze4ciVqp1rmehnm83Ii65Xgq0Ca90b8qw&s", "Smartphones"),
+        ("https://assets.gcore.pro/blog_containerizing_prod/uploads/2023/06/cloud-server-1-1024x683.png", "Cloud Servers"),
+        ("https://mcpress.mayoclinic.org/wp-content/uploads/2024/10/LearnWearableDevicexGettyImages-1130693402.jpg", "Wearables"),
+        ("https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQUTRRiqY3tBdlDOgvASArMISefFpAE9rPfqg&s", "VR Headsets"),
+        ("https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcR0rivM8TLOEP_64Hq-8o6uAtbQnIzhvP-NKQ&s", "3D Printing"),
+        ("https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTtkj_1cA6jHCJC1MBG25tuDyf5mT3zwTJHAA&s", "Drones"),
+        ("https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSWlXIksaMZuRJFrUeQTngnF7YhBRlFb8KsSw&s", "Smart Home"),
+        ("https://cdn.mos.cms.futurecdn.net/hwZMic5XooX6ohDJ3Jh9Eo-1200-80.jpg", "Electric Cars"),
+        ("https://cdn.corporatefinanceinstitute.com/assets/AdobeStock_280230556-scaled.jpeg", "Blockchain"),
+        ("https://boost-lifestyle.co/cdn/shop/files/Boost_Astro_Smart_Watch.png?v=1741773698&width=1080", "Smart Watches"),
+        ("https://autovista24.autovistagroup.com/wp-content/uploads/sites/5/2025/01/ces-self-driving-cars-15-2-25-1024x768.jpg", "Self-driving Cars"),
+        ("https://asimily.com/wp-content/uploads/2024/11/11-Common-IoT-Devices-That-Are-Vulnerable-to-Hacking.png", "IoT Devices"),
+        ("https://www.gpstrategies.com/wp-content/uploads/2023/02/Blog-Viability-AR-VR-mod_02.04.21-web.jpg", "Augmented Reality")
+    };
+}

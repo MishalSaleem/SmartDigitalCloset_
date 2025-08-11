@@ -1,0 +1,147 @@
+@page "/gardening"
+@using Microsoft.AspNetCore.Components
+@using System
+@inject NavigationManager Navigation
+@inject Blazored.SessionStorage.ISessionStorageService SessionStorage
+@inject SmartDigitalCloset.Data.FavoritesService FavoritesService
+@inject SmartDigitalCloset.Data.InterestService InterestService
+@inject IJSRuntime JSRuntime
+
+<!-- Profile Button -->
+<button class="profile-button" @onclick='() => Navigation.NavigateTo("/profile")' title="Profile">
+    👤
+</button>
+
+<div class="music-gradient-bg">
+    <main class="music-inspiration-main">        <h2 class="music-inspiration-title">Gardening Inspiration Gallery</h2>
+        
+        <div style="text-align: center; margin: 15px auto; max-width: 600px;">
+            <input type="text" @bind="searchQuery" @bind:event="oninput" 
+                   placeholder="Search plants and gardening items..." 
+                   style="width: 100%; padding: 8px 12px; border-radius: 20px; border: 1px solid #ddd; font-size: 16px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);" />
+        </div>
+        
+        <div class="music-cars-gallery">
+            @foreach (var item in FilteredItems.Take(itemsToShow))
+            {
+                <div class="car-card" style="position:relative;">
+                    <img src="@item.Url" alt="@item.Name" loading="lazy" class="artist-img" />
+                    <div class="car-label">@item.Name</div>
+                    <button @onclick="() => SaveFavorite(item)" style="position:absolute;top:8px;right:8px;background:none;border:none;cursor:pointer;">
+                        <span style="font-size:1.3rem;color:@(IsFavorite(item) ? "#e60023" : "#bbb");">&#10084;</span>
+                    </button>
+                </div>
+            }
+        </div>
+        @if (itemsToShow < FilteredItems.Count)
+        {
+            <button class="sc-btn-loadmore" @onclick="LoadMore">Load More</button>
+        }
+        <button class="save-interest-btn" @onclick="ToggleInterest" style="background: linear-gradient(135deg, #5D4037 0%, #E64A19 100%);">@(_isSaved ? "Remove from Saved Interests" : "Save Interest")</button>
+    </main>
+</div>
+
+@code {
+    private HashSet<string> favoriteNames = new();
+    private string searchQuery = "";
+    private bool _isSaved;
+    private int itemsToShow = 6;
+    
+    private List<(string Url, string Name)> FilteredItems => string.IsNullOrWhiteSpace(searchQuery)
+        ? GardeningItems
+        : GardeningItems.Where(item => item.Name.Contains(searchQuery, StringComparison.OrdinalIgnoreCase)).ToList();
+        
+    protected override async Task OnInitializedAsync()
+    {
+        var email = await SessionStorage.GetItemAsync<string>("userEmail");
+        if (string.IsNullOrEmpty(email))
+        {
+            Navigation.NavigateTo("/login", true);
+        }
+        else
+        {
+            var favs = await FavoritesService.GetFavoritesAsync(email);
+            favoriteNames = favs.Where(f => f.ItemType == "Gardening").Select(f => f.ItemName).ToHashSet();
+            
+            // Check if interest is already saved
+            _isSaved = await InterestService.HasInterestAsync(email, "Gardening");
+        }
+    }
+    
+    private async Task SaveFavorite((string Url, string Name) item)
+    {
+        try
+        {
+            var email = await SessionStorage.GetItemAsync<string>("userEmail");
+            if (string.IsNullOrEmpty(email)) return;
+            
+            if (favoriteNames.Contains(item.Name))
+            {
+                // Remove from favorites
+                await FavoritesService.RemoveFavoriteAsync(email, item.Name);
+                favoriteNames.Remove(item.Name);
+            }
+            else
+            {
+                // Add to favorites
+                await FavoritesService.AddFavoriteAsync(new SmartDigitalCloset.Data.FavoriteItem
+                {
+                    UserEmail = email,
+                    ItemType = "Gardening",
+                    ItemName = item.Name,
+                    ItemImageUrl = item.Url
+                });
+                favoriteNames.Add(item.Name);
+            }
+            StateHasChanged();
+        }
+        catch (Exception)
+        {
+            // Silently ignore exceptions to prevent UI crashes
+            // In a production app, we would log this exception
+        }
+    }
+    
+    private bool IsFavorite((string Url, string Name) item) => favoriteNames.Contains(item.Name);
+    
+    private async Task ToggleInterest()
+    {
+        var email = await SessionStorage.GetItemAsync<string>("userEmail");
+        if (string.IsNullOrEmpty(email))
+            return;
+            
+        _isSaved = !_isSaved;
+        
+        if (_isSaved)
+        {
+            await InterestService.SaveInterestAsync(email, "Gardening");
+        }
+        else
+        {
+            await InterestService.RemoveInterestAsync(email, "Gardening");
+        }
+        
+        StateHasChanged();
+    }
+
+    private void LoadMore() => itemsToShow = Math.Min(itemsToShow + 6, FilteredItems.Count);
+
+    private List<(string Url, string Name)> GardeningItems = new()
+    {
+        ("https://images.pexels.com/photos/7558150/pexels-photo-7558150.jpeg", "Rose"),
+        ("https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTm5rt0v07dJDK5k1zBahhT5_Wj6nctcRI0Ug&s", "Tulip"),
+        ("https://i.pinimg.com/474x/c3/73/a7/c373a7c2110ea44c34c92f8844ff5a95.jpg", "Sunflower"),
+        ("https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSxvQzazYJa--bx9-Nl1_CiFlnLDhfwipAHqQ&s", "Cactus"),
+        ("https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTLq7YagnVp4lwckfbb1knVJ2NfyACqcMOv-g&s", "Fern"),
+        ("https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSOgNnW3Z0k8uRYFAEELxgwa3wyoXqGnZJwlw&s", "Bonsai"),
+        ("https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcThxAiKkOR_ZghITqiofVdXIJlVyMeo5VLK9w&s", "Orchid"),
+        ("https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQZ96-WaOADrUwt9tK-wF45VeHi56NH7OBm9A&s", "Lavender"),
+        ("https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTDMyWJjhIWM3cE1nqZoosUjHVWmjVCfaOffw&s", "Bamboo"),
+        ("https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTIErwIXXICscB-VFjsL7kC908oEkQ5cpCI2A&s", "Succulent"),
+        ("https://img.drz.lazcdn.com/static/pk/p/13a6200d336d1c4b1d6c81240acd9cb2.jpg_960x960q80.jpg_.webp", "Daisy"),
+        ("https://cdn.britannica.com/40/189540-050-1307654B/garden-peonies.jpg", "Peony"),
+        ("https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcScZoGcB7kC2fmry5BU4yOErv8sV2Xe6Bk0bQ&s", "Hydrangea"),
+        ("https://cdn.shopify.com/s/files/1/0624/7972/8867/files/Photograph-of-Goldchild-Ivy-a-sub-variety-of-English-Ivy.jpg", "Ivy"),
+        ("https://i.pinimg.com/736x/57/97/b2/5797b2fd00d20c8446658b6038c6de1a.jpg", "Lily")
+    };
+}

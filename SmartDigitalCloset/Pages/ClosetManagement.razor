@@ -1,0 +1,285 @@
+@page "/closetmanagement"
+@using Microsoft.AspNetCore.Components.Forms
+@using Microsoft.AspNetCore.Components
+@using SmartDigitalCloset.Data
+@using Microsoft.Extensions.Configuration
+@using System.ComponentModel.DataAnnotations
+@using Microsoft.AspNetCore.Components.Routing
+@using Microsoft.AspNetCore.Components.Web
+@using Microsoft.AspNetCore.Hosting
+@using System.IO
+@inject IConfiguration Configuration
+@inject NavigationManager Navigation
+@inject SmartDigitalCloset.Data.ClosetService ClosetService
+@inject IWebHostEnvironment Env
+@inject IJSRuntime JSRuntime
+
+
+<div class="closet-management-container">
+    <h1 class="page-title">Closet Management</h1>
+
+    <div class="add-item-section">
+        <div class="form-grid">
+            <div class="form-group">
+                <label>Type</label>
+                <select class="form-control" @bind="selectedType">
+                    <option value="">Select Type</option>
+                    <option value="Tops">Tops</option>
+                    <option value="Bottoms">Bottoms</option>
+                    <option value="Dresses">Dresses</option>
+                    <option value="Outerwear">Outerwear</option>
+                    <option value="Shoes">Shoes</option>
+                    <option value="Accessories">Accessories</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label>Season</label>
+                <select class="form-control" @bind="selectedSeason">
+                    <option value="">Select Season</option>
+                    <option value="Spring">Spring</option>
+                    <option value="Summer">Summer</option>
+                    <option value="Fall">Fall</option>
+                    <option value="Winter">Winter</option>
+                    <option value="All Seasons">All Seasons</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label>Color</label>
+                <input type="text" class="form-control" placeholder="e.g. Red, Blue" @bind="color" />
+            </div>
+
+            <div class="form-group">
+                <label>Image</label>
+                <div class="image-upload-container">
+                    <InputFile OnChange="@HandleFileSelected" class="form-control" accept="image/*" />
+                    @if (!string.IsNullOrEmpty(imagePreview))
+                    {
+                        <div class="image-preview">
+                            <img src="@imagePreview" alt="Preview" />
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+
+        <button class="add-item-btn" @onclick="AddItem" disabled="@(!IsFormValid())">
+            Add Item
+        </button>
+    </div>
+
+    <div class="closet-items-section">
+        <h2>Your Closet Items</h2>
+        
+        <div class="filters">
+            <select class="filter-control" @bind="filterType">
+                <option value="">All Types</option>
+                <option value="Tops">Tops</option>
+                <option value="Bottoms">Bottoms</option>
+                <option value="Dresses">Dresses</option>
+                <option value="Outerwear">Outerwear</option>
+                <option value="Shoes">Shoes</option>
+                <option value="Accessories">Accessories</option>
+            </select>
+
+            <select class="filter-control" @bind="filterSeason">
+                <option value="">All Seasons</option>
+                <option value="Spring">Spring</option>
+                <option value="Summer">Summer</option>
+                <option value="Fall">Fall</option>
+                <option value="Winter">Winter</option>
+            </select>
+
+            <input type="text" 
+                   class="filter-control" 
+                   placeholder="Filter by color..." 
+                   @bind="filterColor" 
+                   @bind:event="oninput" />
+        </div>
+
+        <div class="items-grid">
+            @foreach (var item in FilteredItems())
+            {
+                <div class="closet-item">                    <div class="item-image">
+                        <img src="@(item.ImagePath.StartsWith("/") ? item.ImagePath : "/" + item.ImagePath)" alt="@item.Type" />
+                    </div>
+                    <div class="item-details">
+                        <h3>@item.Type</h3>
+                        <p>Season: @item.Season</p>
+                        <p>Color: @item.Color</p>
+                    </div>
+                    <div class="item-actions">
+                        <button class="edit-btn" @onclick="() => EditItem(item)">
+                            <span class="icon">✏️</span>
+                        </button>
+                        <button class="delete-btn" @onclick="() => DeleteItem(item)">
+                            <span class="icon">🗑️</span>
+                        </button>
+                    </div>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+@code {
+    private string selectedType = "";
+    private string selectedSeason = "";
+    private string color = "";
+    private string imagePreview = "";
+    private IBrowserFile? selectedFile;
+
+    private string filterType = "";
+    private string filterSeason = "";
+    private string filterColor = "";
+
+    private List<Data.ClosetItem> items = new List<Data.ClosetItem>();
+    // private int _userId = 1; // Temporarily commented out as it's not currently used
+
+    private async Task LoadItemsAsync()
+    {
+        items = await ClosetService.LoadItemsAsync();
+    }
+
+    protected override async void OnInitialized()
+    {
+        await LoadItemsAsync();
+    }
+
+    private async Task HandleFileSelected(InputFileChangeEventArgs e)
+    {
+        try
+        {
+            selectedFile = e.File;
+            
+            // Create Images directory if it doesn't exist
+            var imagesDir = Path.Combine(Env.WebRootPath, "Images");
+            if (!Directory.Exists(imagesDir))
+            {
+                Directory.CreateDirectory(imagesDir);
+            }
+
+            // Generate unique filename
+            var extension = Path.GetExtension(e.File.Name);
+            var fileName = $"Images/closet_{Guid.NewGuid()}{extension}";
+            var fullPath = Path.Combine(Env.WebRootPath, fileName);
+
+            // Process and resize image
+            var resizedImage = await e.File.RequestImageFileAsync("image/jpeg", 800, 800);
+            await using var fs = new FileStream(fullPath, FileMode.Create);
+            await resizedImage.OpenReadStream().CopyToAsync(fs);
+
+            // Update preview
+            imagePreview = $"/{fileName.Replace("\\", "/")}";
+
+            // Notify user of successful upload
+            await JSRuntime.InvokeVoidAsync("alert", "Image uploaded successfully!");
+        }
+        catch (Exception ex)
+        {
+            await JSRuntime.InvokeVoidAsync("alert", $"Error uploading image: {ex.Message}");
+        }
+    }
+
+    private bool IsFormValid()
+    {
+        return !string.IsNullOrWhiteSpace(selectedType) &&
+               !string.IsNullOrWhiteSpace(selectedSeason) &&
+               !string.IsNullOrWhiteSpace(color) &&
+               !string.IsNullOrWhiteSpace(imagePreview);
+    }
+
+    private async Task AddItem()
+    {
+        try
+        {
+            if (!IsFormValid())
+            {
+                await JSRuntime.InvokeVoidAsync("alert", "Please fill in all required fields!");
+                return;
+            }
+
+            var item = new Data.ClosetItem
+            {
+                // UserId = userId, // Optional for file-based
+                Type = selectedType,
+                Season = selectedSeason,
+                Color = color,
+                ImagePath = imagePreview.TrimStart('/')
+            };
+
+            await ClosetService.SaveItemAsync(item);
+            ResetForm();
+            await LoadItemsAsync();
+            await JSRuntime.InvokeVoidAsync("alert", "Item added successfully!");
+        }
+        catch (Exception ex)
+        {
+            await JSRuntime.InvokeVoidAsync("alert", $"Error adding item: {ex.Message}");
+        }
+    }
+
+    private async Task EditItem(Data.ClosetItem item)
+    {
+        try
+        {            selectedType = item.Type;
+            selectedSeason = item.Season;
+            color = item.Color;
+            imagePreview = item.ImagePath.StartsWith("/") ? item.ImagePath : $"/{item.ImagePath}";
+            // dbHelper!.UpdateItem(item);
+            ResetForm();
+            await LoadItemsAsync();
+
+            await JSRuntime.InvokeVoidAsync("alert", "Item updated successfully!");
+        }
+        catch (Exception ex)
+        {
+            await JSRuntime.InvokeVoidAsync("alert", $"Error updating item: {ex.Message}");
+        }
+    }    private async Task DeleteItem(Data.ClosetItem item)
+    {
+        try
+        {
+            if (!string.IsNullOrEmpty(item.ImagePath))
+            {
+                var imagePath = Path.Combine(Env.WebRootPath, item.ImagePath);
+                if (File.Exists(imagePath))
+                {
+                    File.Delete(imagePath);
+                }
+            }
+            var deleteSuccess = await ClosetService.DeleteItemAsync(item.Id);
+            if (!deleteSuccess)
+            {
+                await JSRuntime.InvokeVoidAsync("alert", "There was an issue deleting your item. Please try again.");
+                return;
+            }
+            await LoadItemsAsync();
+            StateHasChanged(); // Force UI update after deletion
+            await JSRuntime.InvokeVoidAsync("alert", "Item deleted successfully!");
+        }
+        catch (Exception ex)
+        {
+            await JSRuntime.InvokeVoidAsync("alert", $"Error deleting item: {ex.Message}");
+        }
+    }
+
+    private void ResetForm()
+    {
+        selectedType = "";
+        selectedSeason = "";
+        color = "";
+        imagePreview = "";
+        selectedFile = null;
+    }
+
+    private IEnumerable<Data.ClosetItem> FilteredItems()
+    {
+        return items.Where(item =>
+            (string.IsNullOrEmpty(filterType) || item.Type == filterType) &&
+            (string.IsNullOrEmpty(filterSeason) || item.Season == filterSeason) &&
+            (string.IsNullOrEmpty(filterColor) || item.Color.Contains(filterColor, StringComparison.OrdinalIgnoreCase))
+        );
+    }
+}

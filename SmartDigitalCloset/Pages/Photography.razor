@@ -1,0 +1,145 @@
+@page "/photography"
+@using Microsoft.AspNetCore.Components
+@using System
+@inject NavigationManager Navigation
+@inject Blazored.SessionStorage.ISessionStorageService SessionStorage
+@inject SmartDigitalCloset.Data.FavoritesService FavoritesService
+@inject SmartDigitalCloset.Data.InterestService InterestService
+
+<!-- Profile Button -->
+<button class="profile-button" @onclick='() => Navigation.NavigateTo("/profile")' title="Profile">
+    👤
+</button>
+
+<div class="music-gradient-bg">
+    <main class="music-inspiration-main">        <h2 class="music-inspiration-title">Photography Inspiration Gallery</h2>
+        
+        <div style="text-align: center; margin: 15px auto; max-width: 600px;">
+            <input type="text" @bind="searchQuery" @bind:event="oninput" 
+                   placeholder="Search photography styles..." 
+                   style="width: 100%; padding: 8px 12px; border-radius: 20px; border: 1px solid #ddd; font-size: 16px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);" />
+        </div>
+        
+        <div class="music-cars-gallery">
+            @foreach (var item in FilteredItems.Take(itemsToShow))
+            {
+                <div class="car-card" style="position:relative;">
+                    <img src="@item.Url" alt="@item.Name" loading="lazy" class="artist-img" />
+                    <div class="car-label">@item.Name</div>
+                    <button @onclick="() => SaveFavorite(item)" style="position:absolute;top:8px;right:8px;background:none;border:none;cursor:pointer;">
+                        <span style="font-size:1.3rem;color:@(IsFavorite(item) ? "#e60023" : "#bbb");">&#10084;</span>
+                    </button>
+                </div>
+            }
+        </div>        @if (itemsToShow < FilteredItems.Count)
+        {
+            <button class="sc-btn-loadmore" @onclick="LoadMore">Load More</button>
+        }
+        <button class="save-interest-btn" @onclick="ToggleInterest" style="background: linear-gradient(135deg, #5D4037 0%, #E64A19 100%);">@(_isSaved ? "Remove from Saved Interests" : "Save Interest")</button>
+    </main>
+</div>
+
+@code {
+    private HashSet<string> favoriteNames = new();
+    private string searchQuery = "";
+    private bool _isSaved;
+    private int itemsToShow = 6;
+    
+    private List<(string Url, string Name)> FilteredItems => string.IsNullOrWhiteSpace(searchQuery)
+        ? PhotographyItems
+        : PhotographyItems.Where(item => item.Name.Contains(searchQuery, StringComparison.OrdinalIgnoreCase)).ToList();
+    
+    protected override async Task OnInitializedAsync()
+    {
+        var email = await SessionStorage.GetItemAsync<string>("userEmail");
+        if (string.IsNullOrEmpty(email))
+        {
+            Navigation.NavigateTo("/login", true);
+        }
+        else
+        {
+            var favs = await FavoritesService.GetFavoritesAsync(email);
+            favoriteNames = favs.Where(f => f.ItemType == "Photography").Select(f => f.ItemName).ToHashSet();
+            
+            // Check if interest is already saved
+            _isSaved = await InterestService.HasInterestAsync(email, "Photography");
+        }
+    }
+
+    private async Task SaveFavorite((string Url, string Name) item)
+    {
+        try
+        {
+            var email = await SessionStorage.GetItemAsync<string>("userEmail");
+            if (string.IsNullOrEmpty(email)) return;
+            
+            if (favoriteNames.Contains(item.Name))
+            {
+                // Remove from favorites
+                await FavoritesService.RemoveFavoriteAsync(email, item.Name);
+                favoriteNames.Remove(item.Name);
+            }
+            else
+            {
+                // Add to favorites
+                await FavoritesService.AddFavoriteAsync(new SmartDigitalCloset.Data.FavoriteItem
+                {
+                    UserEmail = email,
+                    ItemType = "Photography",
+                    ItemName = item.Name,
+                    ItemImageUrl = item.Url
+                });
+                favoriteNames.Add(item.Name);
+            }
+            StateHasChanged();
+        }
+        catch (Exception)
+        {
+            // Silently ignore exceptions to prevent UI crashes
+            // In a production app, we would log this exception
+        }
+    }
+    
+    private bool IsFavorite((string Url, string Name) item) => favoriteNames.Contains(item.Name);
+    
+    private async Task ToggleInterest()
+    {
+        var email = await SessionStorage.GetItemAsync<string>("userEmail");
+        if (string.IsNullOrEmpty(email))
+            return;
+            
+        _isSaved = !_isSaved;
+        
+        if (_isSaved)
+        {
+            await InterestService.SaveInterestAsync(email, "Photography");
+        }
+        else
+        {
+            await InterestService.RemoveInterestAsync(email, "Photography");
+        }
+        
+        StateHasChanged();
+    }
+
+    private void LoadMore() => itemsToShow = Math.Min(itemsToShow + 6, FilteredItems.Count);
+
+    private List<(string Url, string Name)> PhotographyItems = new()
+    {
+        ("https://images.squarespace-cdn.com/content/v1/5264f7c9e4b0a3247c641860/1620339840853-HMIK8YTEXH7Q4R9NOQV4/canon-r6-portraits_01.jpg", "Canon"),
+        ("https://photographylife.com/wp-content/uploads/2017/09/Nikon-D850-Image-Samples-14.jpg", "Nikon"),
+        ("https://cdn.uc.assets.prezly.com/5c6c841a-879c-4c4c-b1cb-ab11febbf25d/-/resize/1920/-/format/png/-/progressive/yes/-/quality/smart/", "Sony"),
+        ("https://fujilove.com/wp-content/uploads/2020/09/Fuji-X100V-Best-Of-Small-328.jpg", "Fujifilm"),
+        ("https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSFNrQaEyOEda9QFlvUQdRCCirAPQa_esArzw&s", "Leica"),
+        ("https://www.adorama.com/alc/wp-content/uploads/2022/05/Brandonwoelfel12.jpg", "Portrait"),
+        ("https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTlpHoHl0Im5nf0Pe3NTTTeABLslktdIXEwCw&s", "Landscape"),
+        ("https://images.pexels.com/photos/3602154/pexels-photo-3602154.jpeg?h=750&w=700&dpr=1&auto=compress", "Street"),
+        ("https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSAk0wroagDxobllZNVrb3Z5vXUS900GgKbCQ&s", "Wildlife"),
+        ("https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcT2BTO2Xpn8sqYpyBmCxeeORQCgJuqVsPCa8g&s", "Macro"),
+        ("https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQE0vlcprqBiJTInAc1S3YEIPY6ZaKxFWTG5w&s", "Astrophotography"),
+        ("https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQYkSdxDP-us_wJRGGVS4KbIdma-kO4s6niYg&s", "Fashion"),
+        ("https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcT0tZagvHV9SffktX_Fvhv9OFSVbSMxwtdjIw&s", "Documentary"),
+        ("https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcR5NkC72sshBGeKhyDWqSUbTHRsTudrBr-kqQ&s", "Sports"),
+        ("https://www.brides.com/thmb/LMyiMPxRFx82BLiHZC8lySJFnGo=/1500x0/filters:no_upscale():max_bytes(150000):strip_icc()/marriage-pose-photo-recirc-kyle-john-1-29-4f97523aa049471992292e8d6ddc41ee.jpg", "Wedding")
+    };
+}
